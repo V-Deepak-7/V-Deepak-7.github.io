@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepak Vungarala — Research</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Inter for headings/body, JetBrains Mono for data/labels, VT323 for dot-matrix tags -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400&family=VT323&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Theme System */
+        :root {
+            --bg: #faf9f5;
+            --bg-alt: #f1efe6;
+            --text-primary: #2c2a24;
+            --text-secondary: #5f5e4a;
+            --edge: #c9c2ac;
+            --node: #0f6e56;
+            --node-bright: #085041;
+        }
+
+        html[data-theme="dark"] {
+            --bg: #141311;
+            --bg-alt: #191712;
+            --text-primary: #efece4;
+            --text-secondary: #8a8578;
+            --edge: #3a5a4a;
+            --node: #5dcaa5;
+            --node-bright: #9fe1cb;
+        }
+
+        /* Typography */
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        h1, h2, h3 { font-weight: 500; margin: 0; }
+        .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; letter-spacing: -0.02em; }
+        .dot-matrix { font-family: 'VT323', monospace; text-transform: uppercase; font-size: 1.1rem; color: var(--text-secondary); }
+
+        /* Layout */
+        .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 2rem 0; border-bottom: 1px solid var(--edge); }
+        section { padding: 5rem 0; }
+        
+        /* Nav */
+        nav { display: flex; gap: 1.5rem; }
+        nav a { color: var(--text-secondary); text-decoration: none; position: relative; transition: color 0.2s; }
+        nav a:hover { color: var(--text-primary); }
+        nav a.active { color: var(--text-primary); }
+        nav a.active::after {
+            content: "";
+            position: absolute;
+            bottom: -4px; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--node) 10%, var(--edge) 10%, var(--edge) 90%, var(--node) 90%);
+        }
+        .theme-toggle { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem; }
+
+        /* Hero */
+        .hero { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; }
+        .hero h1 { font-size: 2.5rem; letter-spacing: -0.02em; margin-bottom: 1rem; }
+        .hero p { color: var(--text-secondary); font-size: 1.1rem; max-width: 600px; margin-bottom: 2rem; }
+        .hero-actions { display: flex; gap: 1rem; margin-bottom: 3rem; }
+        .btn { padding: 0.5rem 1rem; border: 1px solid var(--edge); background: var(--bg-alt); color: var(--text-primary); cursor: pointer; text-decoration: none; border-radius: 4px; transition: border-color 0.2s; }
+        .btn:hover { border-color: var(--node); }
+        .flagship-strip { display: flex; gap: 2rem; border-top: 1px dashed var(--edge); padding-top: 1rem; }
+
+        /* Graph Animation Container */
+        .graph-canvas { width: 100%; height: 120px; margin-bottom: 2rem; position: relative; }
+        .node { fill: var(--node); opacity: 0; }
+        .edge { stroke: var(--edge); stroke-width: 2; opacity: 0; }
+        
+        @media (prefers-reduced-motion: no-preference) {
+            .node.draw { animation: fadeNode 0.5s forwards ease-out; }
+            .edge.draw { animation: drawEdge 0.8s forwards ease-in-out; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .node.draw, .edge.draw { opacity: 1; stroke-dashoffset: 0; }
+        }
+
+        @keyframes fadeNode { to { opacity: 1; transform: translateY(0); } }
+        @keyframes drawEdge { to { stroke-dashoffset: 0; opacity: 1; } }
+
+        /* Thrust Panels */
+        .thrust-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+        .thrust-card { padding: 1.5rem; border: 1px solid var(--edge); background: var(--bg-alt); transition: border-color 0.2s; position: relative; overflow: hidden; }
+        .thrust-card:hover { border-color: var(--node); }
+        .thrust-card h3 { margin-bottom: 0.5rem; }
+        .thrust-card .projects { color: var(--text-secondary); }
+
+        /* Publications */
+        .pub-row { border-bottom: 1px solid var(--edge); padding: 1.5rem 0; display: flex; gap: 1rem; align-items: baseline; position: relative; transition: transform 0.2s; }
+        .pub-row:hover { transform: translateX(5px); }
+        .pub-row::before { content: ""; position: absolute; left: -15px; top: 0; bottom: 0; width: 2px; background: var(--node); opacity: 0; transition: opacity 0.2s; }
+        .pub-row:hover::before { opacity: 1; }
+        .pub-year { color: var(--text-secondary); min-width: 60px; }
+        .pub-content h4 { margin: 0 0 0.25rem 0; font-size: 1.1rem; }
+        .pub-content p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* RL-AmpSyn Demo Stub */
+        .demo-widget { border: 1px solid var(--edge); background: var(--bg-alt); padding: 2rem; border-radius: 4px; }
+        .glyph-strip { display: flex; gap: 4px; margin-top: 1.5rem; height: 8px; }
+        .glyph-segment { flex: 1; background: var(--edge); transition: background 0.3s; }
+        .glyph-segment.active { background: var(--node); }
+
+        /* Diffusion Divider */
+        .divider { height: 1px; background: linear-gradient(90deg, var(--bg), var(--node) 10%, var(--edge) 50%, var(--bg) 100%); margin: 2rem 0; opacity: 0; }
+        .divider.visible { animation: sweepDivider 1.5s forwards ease-out; }
+        @keyframes sweepDivider { from { background-position: -800px 0; opacity: 0; } to { background-position: 0 0; opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="logo mono">DV //</div>
+        <nav class="mono">
+            <a href="#about" class="active">Research</a>
+            <a href="#publications">Publications</a>
+            <a href="#cv">CV</a>
+            <button class="theme-toggle" id="themeBtn" aria-label="Toggle theme">◐</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- HERO -->
+        <section class="hero">
+            <div class="graph-canvas" id="heroGraph">
+                <svg width="100%" height="100%" viewBox="0 0 800 120">
+                    <!-- SVG Edges -->
+                    <path class="edge" d="M 50 60 L 250 30" stroke-dasharray="250" stroke-dashoffset="250"/>
+                    <path class="edge" d="M 50 60 L 250 90" stroke-dasharray="250" stroke-dashoffset="250"/>
+                    <path class="edge" d="M 250 30 L 450 60" stroke-dasharray="250" stroke-dashoffset="250"/>
+                    <path class="edge" d="M 250 90 L 450 60" stroke-dasharray="250" stroke-dashoffset="250"/>
+                    <path class="edge" d="M 450 60 L 700 60" stroke-dasharray="300" stroke-dashoffset="300"/>
+                    <!-- SVG Nodes -->
+                    <circle class="node" cx="50" cy="60" r="4"/>
+                    <circle class="node" cx="250" cy="30" r="4"/>
+                    <circle class="node" cx="250" cy="90" r="4"/>
+                    <circle class="node" cx="450" cy="60" r="6" style="fill: var(--node-bright);"/>
+                    <circle class="node" cx="700" cy="60" r="4"/>
+                </svg>
+            </div>
+
+            <h1>Generate. Simulate. Verify. Correct.</h1>
+            <p>LLM-driven design automation bridging analog, RF, photonic, and digital hardware topologies through autonomous constraint validation.</p>
+            
+            <div class="hero-actions mono">
+                <a href="#cv" class="btn">View CV</a>
+                <a href="#demo" class="btn" style="border-color: var(--node);">RL-AmpSyn Demo</a>
+            </div>
+
+            <div class="flagship-strip mono">
+                <span>[ MLCAD 2026 ] G-DiffPS</span>
+                <span>[ TCAD 2026 ] LIMCA</span>
+                <span>[ ICLAD 2026 ] PICasso</span>
+            </div>
+        </section>
+
+        <div class="divider trigger-anim"></div>
+
+        <!-- ABOUT -->
+        <section id="about">
+            <span class="dot-matrix">·· Narrative</span>
+            <p style="max-width: 650px; margin-top: 1rem;">
+                I am a Ph.D. candidate in the ACAD Lab at the New Jersey Institute of Technology, specializing in AI-driven electronic and photonic design automation. My research centers on a fundamental pipeline: Generate, Simulate, Verify, Correct. By leveraging generative machine learning, I aim to respect the underlying physics of circuits while generalizing across topologies—moving away from treating CAD as a simple black-box regression. From developing agentic workflows for TPU design to extending physics-informed diffusion models into RF phase shifter synthesis and silicon photonics, my work bridges the gap between modern AI capabilities and the rigorous constraints of hardware architecture.
+            </p>
+        </section>
+
+        <!-- THRUSTS -->
+        <section id="thrusts">
+            <span class="dot-matrix">·· Research Thrusts</span>
+            <div class="thrust-grid" style="margin-top: 1rem;">
+                <div class="thrust-card">
+                    <h3>Analog / RF</h3>
+                    <div class="projects mono">RL-AmpSyn, G-DiffPS</div>
+                </div>
+                <div class="thrust-card">
+                    <h3>Photonics</h3>
+                    <div class="projects mono">PICasso, PICasso+</div>
+                </div>
+                <div class="thrust-card">
+                    <h3>Digital / TPU</h3>
+                    <div class="projects mono">TPU-Gen, ARCANE</div>
+                </div>
+                <div class="thrust-card">
+                    <h3>In-memory Computing</h3>
+                    <div class="projects mono">LIMCA, IMCsim</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider trigger-anim"></div>
+
+        <!-- PUBLICATIONS -->
+        <section id="publications">
+            <span class="dot-matrix">·· Selected Publications</span>
+            <div style="margin-top: 1rem;">
+                
+                <div class="pub-row">
+                    <div class="pub-year mono">2026</div>
+                    <div class="pub-content">
+                        <h4>G-DiffPS: Physics-Informed Graph Diffusion Policy for Amortized Multi-Topology RF Phase Shifter Synthesis</h4>
+                        <p class="mono" style="margin-bottom: 0.5rem;">ACM/IEEE MLCAD</p>
+                        <p>Addresses physics-respecting generative ML across topologies to avoid black-box regression in CAD.</p>
+                    </div>
+                </div>
+
+                <div class="pub-row">
+                    <div class="pub-year mono">2026</div>
+                    <div class="pub-content">
+                        <h4>PICasso: An AI-Enabled Design Framework for Autonomous Optimization of Silicon Photonic Devices</h4>
+                        <p class="mono" style="margin-bottom: 0.5rem;">IEEE ICLAD</p>
+                        <p>Agentic, graph-native design frameworks transitioned into the silicon photonics space.</p>
+                    </div>
+                </div>
+
+                <div class="pub-row">
+                    <div class="pub-year mono">2026</div>
+                    <div class="pub-content">
+                        <h4>LIMCA: LLM for Automating Analog In-Memory Computing Architecture Design Exploration</h4>
+                        <p class="mono" style="margin-bottom: 0.5rem;">IEEE TCAD</p>
+                        <p>Automated design exploration for emerging in-memory computing topologies.</p>
+                    </div>
+                </div>
+
+                <div class="pub-row">
+                    <div class="pub-year mono">2025</div>
+                    <div class="pub-content">
+                        <h4>TPU-Gen: LLM-Driven Custom Tensor Processing Unit Generator</h4>
+                        <p class="mono" style="margin-bottom: 0.5rem;">IEEE ICLAD</p>
+                        <p>Automated generation of customized AI accelerator architectures using Large Language Models.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- DEMO WIDGET -->
+        <section id="demo">
+            <span class="dot-matrix">·· Featured Work</span>
+            <div class="demo-widget" style="margin-top: 1rem;">
+                <h3 style="margin-bottom: 1rem;">RL-AmpSyn Interactive Synthesis</h3>
+                <div class="mono" style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    > Awaiting topology selection...
+                </div>
+                
+                <div class="mono" style="font-size: 0.75rem; display: flex; justify-content: space-between;">
+                    <span>[·] TOPOLOGY SEARCH</span>
+                    <span>[··] SIZING</span>
+                    <span>[···] VERIFIED</span>
+                </div>
+                <div class="glyph-strip">
+                    <div class="glyph-segment active"></div>
+                    <div class="glyph-segment"></div>
+                    <div class="glyph-segment"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer style="padding: 3rem 0; border-top: 1px solid var(--edge); display: flex; justify-content: space-between; align-items: center;">
+        <div class="mono" style="color: var(--text-secondary); font-size: 0.85rem;">Deepak Vungarala © 2026</div>
+        <div class="mono" style="display: flex; gap: 1rem; font-size: 0.85rem;">
+            <a href="#" style="color: var(--text-primary); text-decoration: none;">Email</a>
+            <a href="#" style="color: var(--text-primary); text-decoration: none;">Scholar</a>
+            <a href="#" style="color: var(--text-primary); text-decoration: none;">GitHub</a>
+            <a href="#" style="color: var(--text-primary); text-decoration: none;">LinkedIn</a>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // Theme Toggle Logic
+    const themeBtn = document.getElementById('themeBtn');
+    const htmlEl = document.documentElement;
+    
+    const savedTheme = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme) {
+        htmlEl.setAttribute('data-theme', savedTheme);
+    } else if (systemDark) {
+        htmlEl.setAttribute('data-theme', 'dark');
+    } else {
+        htmlEl.setAttribute('data-theme', 'light');
+    }
+
+    themeBtn.addEventListener('click', () => {
+        const currentTheme = htmlEl.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        htmlEl.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+
+    // Intersection Observer for scroll animations (one-time)
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const animObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                if (entry.target.classList.contains('divider')) {
+                    entry.target.classList.add('visible');
+                }
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.trigger-anim').forEach(el => {
+        animObserver.observe(el);
+    });
+
+    // Hero Graph initial load animation
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const nodes = document.querySelectorAll('.node');
+            const edges = document.querySelectorAll('.edge');
+            
+            // Staggered node noise -> structure
+            nodes.forEach((n, i) => {
+                setTimeout(() => n.classList.add('draw'), i * 150);
+            });
+            
+            // Draw edges after nodes start appearing
+            setTimeout(() => {
+                edges.forEach((e, i) => {
+                    setTimeout(() => e.classList.add('draw'), i * 200);
+                });
+            }, 300);
+        }, 100); // slight delay after DOM ready
+    });
+</script>
+
+</body>
+</html>
