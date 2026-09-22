@@ -107,6 +107,7 @@
         </select>
         <button id="synthesizeBtn" class="btn btn-accent">Synthesize</button>
       </div>
+      <p class="demo-spec mono" id="demoSpec"></p>
 
       <div class="glyph-strip" id="glyphStrip" aria-hidden="true">
         <span class="glyph-seg" data-seg="0"></span>
@@ -125,6 +126,13 @@
         <div class="readout-row"><span>bandwidth</span><span id="outBw">—</span></div>
         <div class="readout-row"><span>power</span><span id="outPower">—</span></div>
         <div class="readout-row"><span>status</span><span id="outStatus">idle</span></div>
+      </div>
+
+      <div class="demo-log mono" id="demoLog" aria-live="polite"></div>
+
+      <div class="demo-netlist">
+        <p class="netlist-label mono">·· sized SPICE netlist</p>
+        <pre class="mono" id="netlistOut">— run synthesis to generate —</pre>
       </div>
     </div>
   </section>

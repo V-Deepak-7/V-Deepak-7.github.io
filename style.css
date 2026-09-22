@@ -202,9 +202,25 @@ section, footer.contact { padding: 96px 0; }
 
 .glyph-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 26px; }
 
+.demo-spec { font-size: 11px; color: var(--text-muted); margin-bottom: 18px; }
+
 .demo-readout { border-top: 1px solid var(--border); padding-top: 18px; display: grid; gap: 10px; max-width: 320px; }
 .readout-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
 .readout-row span:last-child { color: var(--text-primary); }
+
+.demo-log { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; margin: 20px 0 0; }
+.demo-log-row { display: flex; gap: 10px; color: var(--text-muted); }
+.demo-log-row .lr-tag { flex-shrink: 0; width: 12px; }
+.demo-log-row.pass { color: var(--node); }
+.demo-log-row.pass .lr-tag { color: var(--node-bright); }
+
+.demo-netlist { border-top: 1px solid var(--border); margin-top: 22px; padding-top: 18px; }
+.netlist-label { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; }
+.demo-netlist pre {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 14px 16px; font-size: 11.5px; line-height: 1.65; color: var(--text-secondary);
+  overflow-x: auto; white-space: pre;
+}
 
 /* ---------- publications ---------- */
 .pub-filters { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
