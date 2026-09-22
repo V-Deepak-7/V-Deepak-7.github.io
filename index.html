@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Deepak Vungarala — Hardware x LLMs</title>
+<title>Deepak Vungarala — Machines that design machines</title>
 <meta name="description" content="Deepak Vungarala — PhD candidate, NJIT ACAD Lab. LLM-driven design automation for analog, RF, photonic, and digital hardware.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Silkscreen&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,17 +15,22 @@
 <div class="grain"></div>
 
 <nav class="nav" id="nav">
-  <a href="#top" class="nav-mark">DV</a>
+  <a href="#top" class="nav-mark mono">DV</a>
   <div class="nav-links">
     <a href="#research" class="nav-link" data-section="research">Research</a>
+    <a href="#lab" class="nav-link" data-section="lab">Lab</a>
     <a href="#publications" class="nav-link" data-section="publications">Publications</a>
-    <a href="#cv" class="nav-link" data-section="cv">CV</a>
-    <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+    <a href="#about" class="nav-link" data-section="about">About</a>
   </div>
-  <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark theme">
-    <svg id="iconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
-    <svg id="iconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-  </button>
+  <div class="nav-right">
+    <a href="https://github.com/V-Deepak-7" class="nav-icon mono" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://scholar.google.com/citations?user=QnSQ8I8AAAAJ" class="nav-icon mono" target="_blank" rel="noopener">Scholar</a>
+    <a href="assets/Deepak_Vungarala_CV.pdf" class="nav-icon mono" download>CV ↓</a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark theme">
+      <svg id="iconMoon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+      <svg id="iconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
 </nav>
 
 <main id="top">
@@ -33,73 +38,145 @@
   <!-- HERO -->
   <section class="hero">
     <svg class="hero-graph" id="heroGraph" viewBox="0 0 900 420" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+
+    <div class="hero-margin hero-margin-top mono" aria-hidden="true">
+      <span>IDEAS</span><span>ALGORITHMS</span><span>CIRCUITS</span><span>REAL-WORLD IMPACT</span>
+    </div>
+
     <div class="hero-content">
-      <p class="eyebrow mono">research &gt; hardware &gt; llm-driven design</p>
+      <p class="eyebrow mono">[ researcher ]</p>
       <h1 class="hero-title">Deepak<br>Vungarala</h1>
-      <p class="hero-thesis">Generate. Simulate. Verify. Correct.</p>
-      <p class="hero-sub">LLM-driven design automation for analog, RF, photonic, and digital
-        hardware — PhD candidate, NJIT ACAD Lab.</p>
-      <div class="hero-cta">
-        <a href="#cv" class="btn btn-outline">View CV</a>
-        <a href="#demo" class="btn btn-accent">RL-AmpSyn demo</a>
-      </div>
+      <p class="hero-thesis">Machines that design machines.</p>
+      <p class="hero-tags mono">AI × CIRCUITS × PHYSICS × HARDWARE</p>
+      <a href="#research" class="hero-explore mono">↓ explore</a>
     </div>
-    <div class="hero-flagships">
-      <div class="flagship">
-        <span class="mono flagship-venue">MLCAD 2026</span>
-        <span class="flagship-name">G-DiffPS</span>
-      </div>
-      <div class="flagship">
-        <span class="mono flagship-venue">TCAD 2026</span>
-        <span class="flagship-name">LIMCA</span>
-      </div>
-      <div class="flagship">
-        <span class="mono flagship-venue">ICLAD 2026</span>
-        <span class="flagship-name">PICasso</span>
-      </div>
+
+    <div class="hero-margin hero-margin-bottom mono">
+      <p class="hero-margin-block">NJIT / ACAD LAB<br>PHD RESEARCHER<br>2027</p>
+      <p class="hero-margin-block hero-margin-note">FROM PROMPTS<br>TO CIRCUITS<br>AND BEYOND.</p>
     </div>
   </section>
 
-  <div class="divider" data-divider></div>
-
-  <!-- ABOUT / RESEARCH NARRATIVE -->
-  <section class="about" id="research">
-    <p class="section-tag mono dotmatrix">·· about</p>
-    <p class="about-text">
-      I'm a PhD candidate in Electrical and Computer Engineering at NJIT, working in the
-      <strong>ACAD Lab</strong> under Prof. Shaahin Angizi on AI-driven hardware design
-      automation. My research treats circuit synthesis as a loop —
-      <em>generate&nbsp;→&nbsp;simulate&nbsp;→&nbsp;verify&nbsp;→&nbsp;correct</em> —
-      where LLMs and graph-based generative models propose candidate topologies and
-      parameters, physics simulators check them, and failures feed back into the next
-      generation. That framing unifies SPICEPilot, TPU-Gen, LIMCA, ARCANE, PICasso, and
-      G-DiffPS, spanning SPICE-level analog synthesis, custom AI-accelerator generation,
-      in-memory computing architecture exploration, and physics-informed graph diffusion
-      for RF phase shifters. I currently split my time between the ACAD Lab and a research
-      internship at Cognichip.
+  <!-- ABOUT -->
+  <section class="intro" id="about">
+    <p class="section-index mono">[ DV.000 ]</p>
+    <p class="intro-text">
+      I work at the boundary of <strong>artificial intelligence</strong>, <strong>electronic
+      design automation</strong>, and <strong>circuit design</strong>. I'm a PhD candidate in
+      Electrical and Computer Engineering at NJIT's <strong>ACAD Lab</strong>, working under
+      Prof. Shaahin Angizi on AI-driven hardware design automation — treating circuit synthesis
+      as a loop, generate → simulate → verify → correct, where generative models propose
+      candidates, physics simulators check them, and failures feed the next generation.
     </p>
+    <div class="intro-grid mono">
+      <div class="intro-cell"><span class="intro-label">currently</span><span>PhD Researcher</span></div>
+      <div class="intro-cell"><span class="intro-label">lab</span><span>NJIT · ACAD Lab</span></div>
+      <div class="intro-cell"><span class="intro-label">focus</span><span>AI × Hardware</span></div>
+      <div class="intro-cell"><span class="intro-label">also</span><span>Research Intern, Cognichip</span></div>
+    </div>
   </section>
 
-  <div class="divider" data-divider></div>
-
-  <!-- RESEARCH THRUSTS -->
-  <section class="thrusts">
-    <p class="section-tag mono dotmatrix">·· research thrusts</p>
-    <div class="thrust-grid" id="thrustGrid"></div>
+  <!-- SELECTED RESEARCH -->
+  <section class="research" id="research">
+    <div class="section-head">
+      <p class="section-index mono">01</p>
+      <h2 class="section-title">Selected research</h2>
+      <p class="section-note mono">Four directions. One goal —<br>intelligent hardware design.</p>
+    </div>
+    <div class="research-grid" id="researchGrid"></div>
   </section>
 
-  <div class="divider" data-divider></div>
+  <!-- INTERACTIVE LAB -->
+  <section class="lab" id="lab">
+    <div class="section-head">
+      <p class="section-index mono">02</p>
+      <h2 class="section-title">Interactive lab</h2>
+      <p class="section-note mono">Play. Explore. Design.<br>Real models, real constraints.</p>
+    </div>
 
-  <!-- FEATURED DEMO -->
-  <section class="demo" id="demo">
-    <p class="section-tag mono dotmatrix">·· featured work</p>
-    <h2 class="demo-title">RL-AmpSyn — interactive synthesis preview</h2>
-    <p class="demo-sub">Pick a topology. The pipeline searches, sizes, and verifies it —
-      illustrative preview of the actual RL-based synthesis loop.</p>
+    <div class="lab-panel">
+      <div class="lab-intro">
+        <h3>RL-AmpSyn</h3>
+        <p>An interactive environment for RL-based analog amplifier synthesis. Pick a topology
+          and a target spec — a real batched policy-gradient search sizes the devices toward it.</p>
+        <label class="mono" for="topologySelect">Topology</label>
+        <select id="topologySelect" class="mono">
+          <option value="two-stage">Two-stage Miller op-amp</option>
+          <option value="telescopic">Telescopic cascode</option>
+          <option value="folded">Folded cascode</option>
+        </select>
+      </div>
 
-    <div class="demo-panel">
-      <div class="demo-disclosure mono">
-        <p class="disclosure-summary">ⓘ Closed-form gm/ID model with first-order parasitics, sized by a simplified policy-gradient RL search — not a SPICE simulation.
+      <div class="lab-controls mono" id="demoSpecEditor">
+        <div class="lab-slider">
+          <label for="specGainMin">Target gain (dB)<span id="specGainMinVal">—</span></label>
+          <input type="range" id="specGainMin" min="30" max="90" step="1">
+        </div>
+        <div class="lab-slider lab-slider-pair">
+          <label>Bandwidth window (MHz)<span id="specBwVal">—</span></label>
+          <div class="lab-slider-row">
+            <input type="range" id="specBwMin" min="0.5" max="60" step="0.5" aria-label="Bandwidth minimum">
+            <input type="range" id="specBwMax" min="0.5" max="60" step="0.5" aria-label="Bandwidth maximum">
+          </div>
+        </div>
+        <div class="lab-slider">
+          <label for="specPowerMax">Power ≤ (mW)<span id="specPowerMaxVal">—</span></label>
+          <input type="range" id="specPowerMax" min="0.05" max="3" step="0.05">
+        </div>
+        <button type="button" id="specResetBtn" class="spec-reset mono">reset to suggested</button>
+      </div>
+
+      <div class="lab-body">
+        <div class="lab-visual" aria-hidden="true">
+          <svg viewBox="0 0 260 200" class="lab-schematic">
+            <text x="120" y="18" class="mono ls-label">VDD</text>
+            <line x1="120" y1="24" x2="120" y2="42" stroke="var(--edge)"/>
+            <line x1="80" y1="42" x2="160" y2="42" stroke="var(--edge)"/>
+            <line x1="80" y1="42" x2="80" y2="60" stroke="var(--edge)"/>
+            <line x1="160" y1="42" x2="160" y2="60" stroke="var(--edge)"/>
+            <rect x="65" y="60" width="30" height="26" fill="none" stroke="var(--edge)"/>
+            <rect x="145" y="60" width="30" height="26" fill="none" stroke="var(--edge)"/>
+            <text x="30" y="76" class="mono ls-label">Vin</text>
+            <line x1="45" y1="73" x2="65" y2="73" stroke="var(--node)" marker-end="url(#arrowhead)"/>
+            <line x1="95" y1="73" x2="145" y2="73" stroke="var(--edge)"/>
+            <line x1="175" y1="73" x2="205" y2="73" stroke="var(--node)"/>
+            <text x="210" y="76" class="mono ls-label">Vout</text>
+            <line x1="80" y1="86" x2="80" y2="140" stroke="var(--edge)"/>
+            <line x1="160" y1="86" x2="160" y2="140" stroke="var(--edge)"/>
+            <line x1="60" y1="140" x2="180" y2="140" stroke="var(--edge)"/>
+            <line x1="120" y1="140" x2="120" y2="160" stroke="var(--edge)"/>
+            <text x="108" y="178" class="mono ls-label">GND</text>
+            <defs><marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--node)"/></marker></defs>
+          </svg>
+        </div>
+
+        <div class="lab-side">
+          <div class="lab-metrics mono" id="demoReadout">
+            <p class="lm-title">Design metrics</p>
+            <div class="lm-row"><span>Gain</span><span id="outGain">—</span></div>
+            <div class="lm-row"><span>Bandwidth</span><span id="outBw">—</span></div>
+            <div class="lm-row"><span>Power</span><span id="outPower">—</span></div>
+            <div class="lm-status" id="outStatus">idle</div>
+          </div>
+          <button id="synthesizeBtn" class="btn btn-accent lab-run">Run synthesis</button>
+        </div>
+      </div>
+
+      <div class="glyph-strip" id="glyphStrip" aria-hidden="true">
+        <span class="glyph-seg" data-seg="0"></span>
+        <span class="glyph-seg" data-seg="1"></span>
+        <span class="glyph-seg" data-seg="2"></span>
+        <span class="glyph-seg" data-seg="3"></span>
+        <span class="glyph-seg" data-seg="4"></span>
+        <span class="glyph-seg" data-seg="5"></span>
+      </div>
+      <div class="glyph-labels mono" id="glyphLabels">
+        <span>topology search</span><span>sizing</span><span>verified</span>
+      </div>
+
+      <div class="lab-disclosure mono">
+        <p class="disclosure-summary">ⓘ Closed-form gm/ID model with first-order parasitics, sized by real batched
+          policy-gradient RL (REINFORCE) — not a SPICE simulation.
           <button type="button" id="disclosureToggle" class="disclosure-toggle">details ▾</button></p>
         <div class="disclosure-body" id="disclosureBody" hidden>
           <p>Gain, bandwidth, and power come from a closed-form small-signal model
@@ -119,64 +196,30 @@
         </div>
       </div>
 
-      <div class="demo-controls">
-        <label class="mono" for="topologySelect">Topology</label>
-        <select id="topologySelect" class="mono">
-          <option value="two-stage">Two-stage Miller op-amp</option>
-          <option value="telescopic">Telescopic cascode</option>
-          <option value="folded">Folded cascode</option>
-        </select>
-        <button id="synthesizeBtn" class="btn btn-accent">Synthesize</button>
-      </div>
-
-      <div class="demo-spec-editor mono" id="demoSpecEditor">
-        <span class="spec-field"><label for="specGainMin">gain ≥</label>
-          <input type="number" id="specGainMin" min="30" max="90" step="1"><span class="spec-unit">dB</span></span>
-        <span class="spec-field"><label for="specBwMin">bw</label>
-          <input type="number" id="specBwMin" min="0.5" max="60" step="0.5">–<input type="number" id="specBwMax" min="0.5" max="60" step="0.5"><span class="spec-unit">MHz</span></span>
-        <span class="spec-field"><label for="specPowerMax">power ≤</label>
-          <input type="number" id="specPowerMax" min="0.05" max="3" step="0.05"><span class="spec-unit">mW</span></span>
-        <button type="button" id="specResetBtn" class="spec-reset mono">reset to suggested</button>
-      </div>
-
-      <div class="glyph-strip" id="glyphStrip" aria-hidden="true">
-        <span class="glyph-seg" data-seg="0"></span>
-        <span class="glyph-seg" data-seg="1"></span>
-        <span class="glyph-seg" data-seg="2"></span>
-        <span class="glyph-seg" data-seg="3"></span>
-        <span class="glyph-seg" data-seg="4"></span>
-        <span class="glyph-seg" data-seg="5"></span>
-      </div>
-      <div class="glyph-labels mono" id="glyphLabels">
-        <span>topology search</span><span>sizing</span><span>verified</span>
-      </div>
-
-      <div class="demo-readout mono" id="demoReadout">
-        <div class="readout-row"><span>gain</span><span id="outGain">—</span></div>
-        <div class="readout-row"><span>bandwidth</span><span id="outBw">—</span></div>
-        <div class="readout-row"><span>power</span><span id="outPower">—</span></div>
-        <div class="readout-row"><span>status</span><span id="outStatus">idle</span></div>
-      </div>
-
-      <div class="demo-bode">
-        <p class="netlist-label mono">·· AC response — closed-form from the sized poles</p>
-        <div id="bodeChart"></div>
-      </div>
-
-      <div class="demo-log mono" id="demoLog" aria-live="polite"></div>
-
-      <div class="demo-netlist">
-        <p class="netlist-label mono">·· sized SPICE netlist</p>
-        <pre class="mono" id="netlistOut">— run synthesis to generate —</pre>
+      <button type="button" id="labDetailsToggle" class="lab-details-toggle mono">
+        view full synthesis log, netlist &amp; AC response ▾
+      </button>
+      <div class="lab-details" id="labDetails" hidden>
+        <div class="demo-log mono" id="demoLog" aria-live="polite"></div>
+        <div class="demo-bode">
+          <p class="netlist-label mono">·· AC response — closed-form from the sized poles</p>
+          <div id="bodeChart"></div>
+        </div>
+        <div class="demo-netlist">
+          <p class="netlist-label mono">·· sized SPICE netlist</p>
+          <pre class="mono" id="netlistOut">— run synthesis to generate —</pre>
+        </div>
       </div>
     </div>
   </section>
 
-  <div class="divider" data-divider></div>
-
   <!-- PUBLICATIONS -->
   <section class="publications" id="publications">
-    <p class="section-tag mono dotmatrix">·· publications</p>
+    <div class="section-head">
+      <p class="section-index mono">03</p>
+      <h2 class="section-title">Publications</h2>
+      <p class="section-note mono">Ideas to impact.<br>Selected works.</p>
+    </div>
     <div class="pub-filters mono" id="pubFilters">
       <button class="filter-btn active" data-filter="all">all</button>
       <button class="filter-btn" data-filter="analog">analog / rf</button>
@@ -187,43 +230,35 @@
     <div class="pub-list" id="pubList"></div>
   </section>
 
-  <div class="divider" data-divider></div>
-
-  <!-- EXPERIENCE TIMELINE -->
-  <section class="timeline-section">
-    <p class="section-tag mono dotmatrix">·· experience</p>
-    <div class="timeline" id="timeline">
-      <svg class="timeline-trace" id="timelineTrace" viewBox="0 0 1000 60" preserveAspectRatio="none" aria-hidden="true">
-        <line x1="0" y1="30" x2="1000" y2="30" stroke="var(--edge)" stroke-width="1" stroke-dasharray="1000" stroke-dashoffset="1000" id="timelineLine"/>
-      </svg>
-      <div class="timeline-items" id="timelineItems"></div>
+  <!-- EXPERIENCE + CV -->
+  <section class="profile" id="profile">
+    <div class="profile-col">
+      <p class="section-index mono">[ DV.EXP ]</p>
+      <h3 class="mono profile-heading">Experience</h3>
+      <div class="profile-list" id="timelineItems"></div>
+    </div>
+    <div class="profile-col">
+      <p class="section-index mono">[ DV.CV ]</p>
+      <h3 class="mono profile-heading">CV highlights</h3>
+      <div class="profile-list cv-grid" id="cvGrid"></div>
+      <a href="assets/Deepak_Vungarala_CV.pdf" class="btn btn-outline" download>Download full CV</a>
     </div>
   </section>
-
-  <div class="divider" data-divider></div>
-
-  <!-- CV -->
-  <section class="cv" id="cv">
-    <p class="section-tag mono dotmatrix">·· cv</p>
-    <div class="cv-header">
-      <h2>Curriculum Vitae</h2>
-      <a href="assets/Deepak_Vungarala_CV.pdf" class="btn btn-outline" download>Download PDF</a>
-    </div>
-    <div class="cv-grid" id="cvGrid"></div>
-  </section>
-
-  <div class="divider" data-divider></div>
 
   <!-- CONTACT / FOOTER -->
   <footer class="contact" id="contact">
-    <p class="section-tag mono dotmatrix">·· contact</p>
+    <p class="contact-cta">Let's build machines<br>that design machines.</p>
+    <a href="mailto:dvungarala7@gmail.com" class="contact-email mono">dvungarala7@gmail.com ↗</a>
     <div class="contact-links mono">
-      <a href="mailto:dvungarala7@gmail.com">dvungarala7@gmail.com</a>
       <a href="https://scholar.google.com/citations?user=QnSQ8I8AAAAJ" target="_blank" rel="noopener">Google Scholar</a>
       <a href="https://github.com/V-Deepak-7" target="_blank" rel="noopener">GitHub</a>
       <a href="https://www.linkedin.com/in/deepak-vungarala/" target="_blank" rel="noopener">LinkedIn</a>
     </div>
-    <p class="footer-note mono">NJIT ACAD Lab · Newark, NJ</p>
+    <div class="footer-bottom mono">
+      <span class="nav-mark">DV</span>
+      <span class="footer-note">Research × Hardware × Higher possibilities</span>
+      <span class="footer-note">Curiosity compounds.</span>
+    </div>
   </footer>
 
 </main>

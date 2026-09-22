@@ -1,23 +1,35 @@
-const THRUSTS = [
+const PROJECTS = [
   {
-    label: "analog / rf",
-    projects: "RL-AmpSyn · G-DiffPS",
-    glyph: `<line x1="20" y1="45" x2="60" y2="20" stroke="var(--edge)"/><line x1="60" y1="20" x2="120" y2="20" stroke="var(--edge)"/><line x1="120" y1="20" x2="160" y2="45" stroke="var(--edge)"/><line x1="60" y1="20" x2="90" y2="50" stroke="var(--edge)"/><rect x="14" y="39" width="12" height="12" fill="none" stroke="var(--node)"/><circle cx="60" cy="20" r="4" fill="var(--node)"/><circle cx="120" cy="20" r="4" fill="var(--node)"/><circle cx="160" cy="45" r="4" fill="var(--node-bright)"/><path d="M82 44 a8 8 0 1 1 16 0" stroke="var(--node)" fill="none"/>`
+    tag: "RF / ANALOG",
+    name: "G-DiffPS",
+    desc: "Physics-informed graph diffusion for amortized, multi-topology RF phase shifter synthesis.",
+    venue: "MLCAD 2026",
+    href: "#publications",
+    glyph: `<line x1="20" y1="60" x2="60" y2="30" stroke="var(--edge)"/><line x1="60" y1="30" x2="120" y2="30" stroke="var(--edge)"/><line x1="120" y1="30" x2="165" y2="60" stroke="var(--edge)"/><line x1="60" y1="30" x2="90" y2="65" stroke="var(--edge)"/><line x1="120" y1="30" x2="90" y2="65" stroke="var(--edge)"/><circle cx="20" cy="60" r="3.5" fill="var(--node)"/><circle cx="60" cy="30" r="3.5" fill="var(--node)"/><circle cx="120" cy="30" r="3.5" fill="var(--node)"/><circle cx="90" cy="65" r="3.5" fill="var(--node)"/><circle cx="165" cy="60" r="4.5" fill="var(--node-bright)"/>`
   },
   {
-    label: "photonics",
-    projects: "PICasso · PICasso+",
-    glyph: `<line x1="15" y1="30" x2="70" y2="30" stroke="var(--edge)"/><circle cx="105" cy="30" r="24" stroke="var(--edge)" fill="none"/><line x1="140" y1="30" x2="200" y2="30" stroke="var(--edge)"/><circle cx="70" cy="30" r="3.5" fill="var(--node)"/><circle cx="140" cy="30" r="3.5" fill="var(--node)"/><circle cx="105" cy="6" r="3" fill="var(--node-bright)"/>`
+    tag: "ANALOG / RL",
+    name: "RL-AmpSyn",
+    desc: "Reinforcement-learning-enhanced operational amplifier generation and optimization.",
+    venue: "Interactive demo",
+    href: "#lab",
+    glyph: `<path d="M15 70 Q 55 70 75 20 Q 95 70 165 70" fill="none" stroke="var(--edge)"/><circle cx="15" cy="70" r="3" fill="var(--node)"/><circle cx="75" cy="20" r="4" fill="var(--node-bright)"/><circle cx="165" cy="70" r="3" fill="var(--node)"/>`
   },
   {
-    label: "digital / tpu",
-    projects: "TPU-Gen · ARCANE",
-    glyph: `<rect x="20" y="10" width="14" height="14" fill="none" stroke="var(--edge)"/><rect x="20" y="28" width="14" height="14" fill="none" stroke="var(--edge)"/><rect x="60" y="19" width="14" height="14" fill="none" stroke="var(--edge)"/><line x1="34" y1="17" x2="60" y2="26" stroke="var(--edge)"/><line x1="34" y1="35" x2="60" y2="26" stroke="var(--edge)"/><line x1="74" y1="26" x2="130" y2="26" stroke="var(--edge)"/><circle cx="27" cy="17" r="2.5" fill="var(--node)"/><circle cx="27" cy="35" r="2.5" fill="var(--node)"/><circle cx="67" cy="26" r="2.5" fill="var(--node)"/><circle cx="130" cy="26" r="3" fill="var(--node-bright)"/>`
+    tag: "PHOTONICS",
+    name: "PICasso",
+    desc: "AI-enabled design framework for autonomous optimization of silicon photonic devices.",
+    venue: "ICLAD 2026",
+    href: "#publications",
+    glyph: `<line x1="12" y1="45" x2="65" y2="45" stroke="var(--edge)"/><circle cx="100" cy="45" r="24" stroke="var(--edge)" fill="none"/><line x1="135" y1="45" x2="175" y2="45" stroke="var(--edge)"/><circle cx="65" cy="45" r="3" fill="var(--node)"/><circle cx="135" cy="45" r="3" fill="var(--node)"/><circle cx="100" cy="21" r="3" fill="var(--node-bright)"/>`
   },
   {
-    label: "in-memory computing",
-    projects: "LIMCA · IMCsim",
-    glyph: `<line x1="20" y1="10" x2="20" y2="40" stroke="var(--edge)"/><line x1="45" y1="10" x2="45" y2="40" stroke="var(--edge)"/><line x1="70" y1="10" x2="70" y2="40" stroke="var(--edge)"/><line x1="10" y1="15" x2="80" y2="15" stroke="var(--edge)"/><line x1="10" y1="35" x2="80" y2="35" stroke="var(--edge)"/><circle cx="20" cy="15" r="2.5" fill="var(--node)"/><circle cx="45" cy="15" r="2.5" fill="var(--node-bright)"/><circle cx="70" cy="35" r="2.5" fill="var(--node)"/><line x1="80" y1="25" x2="140" y2="25" stroke="var(--edge)"/><circle cx="140" cy="25" r="3" fill="var(--node)"/>`
+    tag: "IMC / ARCH",
+    name: "LIMCA",
+    desc: "LLM for automating analog in-memory computing architecture design exploration.",
+    venue: "IEEE TCAD 2026",
+    href: "#publications",
+    glyph: `<line x1="25" y1="15" x2="25" y2="65" stroke="var(--edge)"/><line x1="55" y1="15" x2="55" y2="65" stroke="var(--edge)"/><line x1="85" y1="15" x2="85" y2="65" stroke="var(--edge)"/><line x1="115" y1="15" x2="115" y2="65" stroke="var(--edge)"/><line x1="12" y1="25" x2="128" y2="25" stroke="var(--edge)"/><line x1="12" y1="45" x2="128" y2="45" stroke="var(--edge)"/><line x1="12" y1="65" x2="128" y2="65" stroke="var(--edge)"/><circle cx="25" cy="25" r="3" fill="var(--node)"/><circle cx="55" cy="45" r="3" fill="var(--node-bright)"/><circle cx="85" cy="65" r="3" fill="var(--node)"/><circle cx="115" cy="25" r="3" fill="var(--node)"/>`
   }
 ];
 

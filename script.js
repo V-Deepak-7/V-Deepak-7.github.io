@@ -25,7 +25,7 @@
 
   /* ---------- nav active link (scroll spy) ---------- */
   const navLinks = document.querySelectorAll('.nav-link');
-  const sections = ['research', 'publications', 'cv', 'contact'].map(id => document.getElementById(id));
+  const sections = ['about', 'research', 'lab', 'publications'].map(id => document.getElementById(id));
 
   function updateActiveNav() {
     let current = null;
@@ -100,40 +100,8 @@
   }
   requestAnimationFrame(() => setTimeout(playHeroGraph, 150));
 
-  /* ---------- section dividers: diffusion sweep, once on scroll into view ---------- */
-  function buildDivider(el) {
-    el.innerHTML = `<svg viewBox="0 0 1000 40" preserveAspectRatio="none">
-      <circle cx="30" cy="20" r="1.5" fill="var(--text-muted)" opacity="0.4"/>
-      <circle cx="55" cy="12" r="1.5" fill="var(--text-muted)" opacity="0.4"/>
-      <circle cx="75" cy="28" r="1.5" fill="var(--text-muted)" opacity="0.5"/>
-      <circle cx="105" cy="16" r="1.5" fill="var(--text-muted)" opacity="0.6"/>
-      <line class="dv-e1" x1="160" y1="20" x2="240" y2="20" stroke="var(--edge)" stroke-width="1" stroke-dasharray="80" stroke-dashoffset="80"/>
-      <circle class="dv-n1" cx="160" cy="20" r="2.5" fill="var(--node)" opacity="0"/>
-      <line class="dv-e2" x1="240" y1="20" x2="320" y2="20" stroke="var(--edge)" stroke-width="1" stroke-dasharray="80" stroke-dashoffset="80"/>
-      <circle class="dv-n2" cx="240" cy="20" r="2.5" fill="var(--node)" opacity="0"/>
-      <circle class="dv-n3" cx="320" cy="20" r="3" fill="var(--node-bright)" opacity="0"/>
-      <line x1="320" y1="20" x2="1000" y2="20" stroke="var(--border)" stroke-width="1"/>
-    </svg>`;
-  }
-  document.querySelectorAll('[data-divider]').forEach(buildDivider);
-
-  function playDivider(el) {
-    if (reduceMotion) {
-      el.querySelectorAll('circle, line').forEach(n => { n.style.opacity = n.classList.contains('dv-n1') || n.classList.contains('dv-n2') || n.classList.contains('dv-n3') ? 1 : n.getAttribute('opacity'); n.style.strokeDashoffset = 0; });
-      return;
-    }
-    const n1 = el.querySelector('.dv-n1'), n2 = el.querySelector('.dv-n2'), n3 = el.querySelector('.dv-n3');
-    const e1 = el.querySelector('.dv-e1'), e2 = el.querySelector('.dv-e2');
-    [n1, n2, n3, e1, e2].forEach(x => x && (x.style.transition = 'opacity 0.3s ease, stroke-dashoffset 0.4s ease'));
-    setTimeout(() => n1 && n1.setAttribute('opacity', 0.8), 0);
-    setTimeout(() => e1 && (e1.style.strokeDashoffset = '0'), 100);
-    setTimeout(() => n2 && n2.setAttribute('opacity', 0.8), 400);
-    setTimeout(() => e2 && (e2.style.strokeDashoffset = '0'), 480);
-    setTimeout(() => n3 && n3.setAttribute('opacity', 1), 780);
-  }
-
   /* ---------- generic reveal + once-only observer ---------- */
-  const revealTargets = document.querySelectorAll('.about-text, .thrust-grid, .demo-panel, .pub-list, .cv-grid');
+  const revealTargets = document.querySelectorAll('.intro-text, .research-grid, .lab-panel, .pub-list, .profile-list');
   revealTargets.forEach(el => el.setAttribute('data-reveal', ''));
 
   const io = new IntersectionObserver((entries) => {
@@ -141,42 +109,40 @@
       if (!entry.isIntersecting) return;
       const el = entry.target;
       if (el.hasAttribute('data-reveal')) el.classList.add('revealed');
-      if (el.hasAttribute('data-divider') && !el.dataset.played) {
-        el.dataset.played = '1';
-        playDivider(el);
-      }
-      if (el.id === 'timeline' && !el.dataset.played) {
-        el.dataset.played = '1';
-        playTimelineTrace();
-      }
       io.unobserve(el);
     });
   }, { threshold: 0.3 });
 
   revealTargets.forEach(el => io.observe(el));
-  document.querySelectorAll('[data-divider]').forEach(el => io.observe(el));
-  io.observe(document.getElementById('timeline'));
 
-  /* ---------- thrust panels ---------- */
-  const thrustGrid = document.getElementById('thrustGrid');
-  THRUSTS.forEach(t => {
-    const panel = document.createElement('div');
-    panel.className = 'thrust-panel';
-    panel.innerHTML = `
-      <p class="thrust-label mono dotmatrix">·· ${t.label}</p>
-      <svg width="100%" height="50" viewBox="0 0 220 50" class="thrust-svg">${t.glyph}</svg>
-      <p class="thrust-projects">${t.projects}</p>`;
-    thrustGrid.appendChild(panel);
+  /* ---------- selected research cards ---------- */
+  const researchGrid = document.getElementById('researchGrid');
+  PROJECTS.forEach((p, i) => {
+    const card = document.createElement(p.href.startsWith('#') ? 'a' : 'div');
+    card.className = 'research-card';
+    if (p.href) card.href = p.href;
+    card.innerHTML = `
+      <div class="rc-top">
+        <span class="rc-index mono">0${i + 1}</span>
+        <span class="rc-tag mono">[ ${p.tag} ]</span>
+      </div>
+      <h3>${p.name}</h3>
+      <p>${p.desc}</p>
+      <svg class="rc-glyph" viewBox="0 0 190 90">${p.glyph}</svg>
+      <div class="rc-foot">
+        <span class="mono">${p.venue}</span>
+        <span class="rc-link">↗</span>
+      </div>`;
+    researchGrid.appendChild(card);
 
-    // hover micro-replay: fade edges/nodes out then back in
-    const svg = panel.querySelector('.thrust-svg');
-    panel.addEventListener('mouseenter', () => {
+    const glyph = card.querySelector('.rc-glyph');
+    card.addEventListener('mouseenter', () => {
       if (reduceMotion) return;
-      const shapes = svg.querySelectorAll('line, rect, circle, path');
-      shapes.forEach((s, i) => {
+      const shapes = glyph.querySelectorAll('line, rect, circle, path');
+      shapes.forEach((s, idx) => {
         s.style.transition = 'opacity 0.25s ease';
         s.style.opacity = '0.15';
-        setTimeout(() => { s.style.opacity = '1'; }, 120 + i * 25);
+        setTimeout(() => { s.style.opacity = '1'; }, 100 + idx * 25);
       });
     });
   });
@@ -213,30 +179,23 @@
   const timelineItems = document.getElementById('timelineItems');
   TIMELINE.forEach(item => {
     const el = document.createElement('div');
-    el.className = 'timeline-item';
+    el.className = 'profile-item';
     el.innerHTML = `
-      <div class="timeline-role">${item.role}</div>
-      <div class="timeline-org">${item.org}</div>
-      <div class="timeline-date mono">${item.date}</div>`;
+      <div class="profile-item-title">${item.role}</div>
+      <div class="profile-item-sub">${item.org}</div>
+      <div class="profile-item-date mono">${item.date}</div>`;
     timelineItems.appendChild(el);
   });
-
-  function playTimelineTrace() {
-    const line = document.getElementById('timelineLine');
-    if (reduceMotion) { line.style.strokeDashoffset = '0'; return; }
-    line.style.transition = 'stroke-dashoffset 1s ease';
-    requestAnimationFrame(() => { line.style.strokeDashoffset = '0'; });
-  }
 
   /* ---------- cv ---------- */
   const cvGrid = document.getElementById('cvGrid');
   function cvBlock(title, entries) {
     const block = document.createElement('div');
     block.className = 'cv-block';
-    block.innerHTML = `<h3 class="mono">${title}</h3>` + entries.map(e => `
-      <div class="cv-entry">
-        <div class="cv-entry-title">${e.title}</div>
-        ${e.sub ? `<div class="cv-entry-sub">${e.sub}</div>` : ''}
+    block.innerHTML = `<h4 class="mono">${title}</h4>` + entries.map(e => `
+      <div class="profile-item">
+        <div class="profile-item-title">${e.title}</div>
+        ${e.sub ? `<div class="profile-item-sub">${e.sub}</div>` : ''}
       </div>`).join('');
     return block;
   }
@@ -267,15 +226,35 @@
   const specBwMinEl = document.getElementById('specBwMin');
   const specBwMaxEl = document.getElementById('specBwMax');
   const specPowerMaxEl = document.getElementById('specPowerMax');
+  const specGainMinVal = document.getElementById('specGainMinVal');
+  const specBwVal = document.getElementById('specBwVal');
+  const specPowerMaxVal = document.getElementById('specPowerMaxVal');
   const specResetBtn = document.getElementById('specResetBtn');
   const disclosureToggle = document.getElementById('disclosureToggle');
   const disclosureBody = document.getElementById('disclosureBody');
+  const labDetailsToggle = document.getElementById('labDetailsToggle');
+  const labDetails = document.getElementById('labDetails');
 
   disclosureToggle.addEventListener('click', () => {
     const opening = disclosureBody.hidden;
     disclosureBody.hidden = !opening;
     disclosureToggle.textContent = opening ? 'details ▴' : 'details ▾';
   });
+
+  labDetailsToggle.addEventListener('click', () => {
+    const opening = labDetails.hidden;
+    labDetails.hidden = !opening;
+    labDetailsToggle.textContent = opening
+      ? 'hide synthesis log, netlist & AC response ▴'
+      : 'view full synthesis log, netlist & AC response ▾';
+  });
+
+  function updateSliderLabels() {
+    specGainMinVal.textContent = `${fmt(parseFloat(specGainMinEl.value), 0)} dB`;
+    specBwVal.textContent = `${fmt(parseFloat(specBwMinEl.value), 1)}–${fmt(parseFloat(specBwMaxEl.value), 1)} MHz`;
+    specPowerMaxVal.textContent = `${fmt(parseFloat(specPowerMaxEl.value), 2)} mW`;
+  }
+  [specGainMinEl, specBwMinEl, specBwMaxEl, specPowerMaxEl].forEach(el => el.addEventListener('input', updateSliderLabels));
 
   const PROC = { KN: 220, KP: 90, VA: 8.0, VDD: 1.8, COX: 9.0 }; // uA/V^2, V/um, V, fF/um^2 — illustrative ~180nm-class corner
 
@@ -547,12 +526,14 @@ X1   vin+ vin- vout vdd vss FOLDED_OPAMP
     specBwMinEl.value = topo.spec.bwMin;
     specBwMaxEl.value = topo.spec.bwMax;
     specPowerMaxEl.value = topo.spec.powerMax;
+    updateSliderLabels();
   }
 
   function resetDemo() {
     glyphSegs.forEach(s => s.classList.remove('lit'));
     outGain.textContent = '—'; outBw.textContent = '—'; outPower.textContent = '—';
     outStatus.textContent = 'idle';
+    outStatus.classList.remove('pass');
     demoLog.innerHTML = '';
     netlistOut.textContent = '— run synthesis to generate —';
     bodeChartEl.innerHTML = '<p class="bode-empty mono">— run synthesis to generate —</p>';
@@ -625,7 +606,10 @@ X1   vin+ vin- vout vdd vss FOLDED_OPAMP
           outGain.textContent = fmt(r2.gainDb, 1) + ' dB';
           outBw.textContent = fmt(r2.bwMHz, 1) + ' MHz';
           outPower.textContent = fmt(r2.powerMW, 2) + ' mW';
-          outStatus.textContent = metSpec ? 'verified' : 'spec not met — closest result';
+          outStatus.innerHTML = metSpec
+            ? '<span class="lm-check">✓</span> constraints met'
+            : 'spec not met — closest result';
+          outStatus.classList.toggle('pass', metSpec);
           netlistOut.textContent = topo.netlist(r2.sized);
           buildBodeChart(r2);
           synthesizeBtn.disabled = false;
