@@ -246,12 +246,11 @@
   cvGrid.appendChild(cvBlock('service', CV_DATA.service));
 
   /* ---------- RL-AmpSyn demo: gm/ID sizing search + SPICE netlist ----------
-     Each "Synthesize" click runs a small simulated-annealing-style search:
-     early candidates sample widely across the gm/ID design space (and often
-     miss spec), later candidates narrow back toward a known-good point —
-     mirroring the explore-then-converge pattern of the real RL sizing loop.
-     Gain/bandwidth/power are computed per candidate from standard op-amp
-     small-signal equations (gm = (gm/ID)·ID, ro = VA'·L/ID), not looked up. */
+     A closed-form gm/ID small-signal model (gm = (gm/ID)·ID, ro = VA'·L/ID),
+     with a first-order device-geometry parasitic estimate at the output node.
+     "Synthesize" runs real simulated annealing (Metropolis acceptance, see
+     SA_T0/SA_T_MIN below) over that model to hit a user-editable target spec.
+     This is NOT a SPICE simulation — see the disclosure note in the panel. */
   const synthesizeBtn = document.getElementById('synthesizeBtn');
   const topologySelect = document.getElementById('topologySelect');
   const glyphSegs = document.querySelectorAll('.glyph-seg');
@@ -267,12 +266,24 @@
   const specBwMaxEl = document.getElementById('specBwMax');
   const specPowerMaxEl = document.getElementById('specPowerMax');
   const specResetBtn = document.getElementById('specResetBtn');
+  const disclosureToggle = document.getElementById('disclosureToggle');
+  const disclosureBody = document.getElementById('disclosureBody');
 
-  const PROC = { KN: 220, KP: 90, VA: 8.0, VDD: 1.8 }; // uA/V^2, V/um (Early voltage coeff.), V — illustrative process corner
+  disclosureToggle.addEventListener('click', () => {
+    const opening = disclosureBody.hidden;
+    disclosureBody.hidden = !opening;
+    disclosureToggle.textContent = opening ? 'details ▴' : 'details ▾';
+  });
+
+  const PROC = { KN: 220, KP: 90, VA: 8.0, VDD: 1.8, COX: 9.0 }; // uA/V^2, V/um, V, fF/um^2 — illustrative ~180nm-class corner
 
   const gmOf = (gmid, idUA) => gmid * idUA;                                    // uS
   const roOf = (lUM, idUA) => PROC.VA * lUM / idUA;                            // MOhm
   const wOf = (gmid, idUA, k, lUM) => ((gmid * gmid * idUA) / (2 * k)) * lUM;  // um
+  // First-order parasitic estimate at a device's drain node (Cgd overlap + Cdb junction),
+  // as a fraction of gate cap — not an extracted BSIM parasitic, but scales with the
+  // actual sized W·L so bigger output devices genuinely cost bandwidth/phase margin.
+  const cParOf = (wUM, lUM) => (0.4 * PROC.COX * wUM * lUM) / 1000; // pF
   const rand = (min, max) => min + Math.random() * (max - min);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (n, d) => n.toFixed(d);
@@ -284,7 +295,7 @@
       spread: { gmid1: 3.5, L3: 0.6, Ibias1: 25, gmid6: 3, L6: 0.6, L7: 0.6, Ibias2: 90, Cc: 7 },
       bounds: { gmid1: [6, 22], L3: [0.5, 3], Ibias1: [8, 200], gmid6: [4, 16], L6: [0.5, 3], L7: [0.5, 3], Ibias2: [30, 500], Cc: [1, 40] },
       fixed: { L1: 0.5 },
-      poleCL2: 18, // pF — assumed output loading setting the non-dominant pole (~2-3x GBW, typical compensation target)
+      fanoutLoad: 14, // pF — assumed external load (e.g. driving an ADC sampling network), added to the sized devices' own parasitic
       evaluate(p) {
         const L1 = this.fixed.L1;
         const ID1 = p.Ibias1 / 2;
@@ -297,30 +308,53 @@
         const powerMW = PROC.VDD * (p.Ibias1 + p.Ibias2) * 1e-3;
         const A0 = Math.pow(10, gainDb / 20);
         const fp1 = (bwMHz * 1e6) / A0;
-        const fp2 = (gm6 * 1e-6) / (2 * Math.PI * this.poleCL2 * 1e-12);
+        const W1 = wOf(p.gmid1, ID1, PROC.KN, L1);
+        const W3 = wOf(p.gmid1, ID1, PROC.KP, p.L3);
+        const W6 = wOf(p.gmid6, p.Ibias2, PROC.KP, p.L6);
+        const W7 = wOf(p.gmid6, p.Ibias2, PROC.KN, p.L7);
+        const cPar2 = cParOf(W6, p.L6) + cParOf(W7, p.L7) + this.fanoutLoad; // pF, output-node parasitic
+        const fp2 = (gm6 * 1e-6) / (2 * Math.PI * cPar2 * 1e-12);
         const sized = {
-          W1: wOf(p.gmid1, ID1, PROC.KN, L1), L1,
-          W3: wOf(p.gmid1, ID1, PROC.KP, p.L3), L3: p.L3,
-          W6: wOf(p.gmid6, p.Ibias2, PROC.KP, p.L6), L6: p.L6,
-          W7: wOf(p.gmid6, p.Ibias2, PROC.KN, p.L7), L7: p.L7,
-          Ibias1: p.Ibias1, Ibias2: p.Ibias2, Cc: p.Cc
+          W1, L1, W3, L3: p.L3, W6, L6: p.L6, W7, L7: p.L7,
+          Ibias1: p.Ibias1, Ibias2: p.Ibias2, Cc: p.Cc, cPar2
         };
         return { gainDb, bwMHz, powerMW, sized, poles: { fp1, fp2 } };
       },
       netlist(s) {
-        return `* Two-stage Miller-compensated op-amp — RL-AmpSyn sizing
-.subckt TWOSTAGE_OPAMP vin+ vin- vout vdd vss
-M1  d1    vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M2  d2    vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M3  d1    d1     vdd   vdd  PMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.L3, 2)}u
-M4  d2    d1     vdd   vdd  PMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.L3, 2)}u
-M5  tail  vbias1 vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}u  L=${fmt(s.L1, 2)}u  ; tail, I=${fmt(s.Ibias1, 1)}uA
-M6  vout  d2     vdd   vdd  PMOS  W=${fmt(s.W6, 2)}u  L=${fmt(s.L6, 2)}u     ; 2nd stage, I=${fmt(s.Ibias2, 1)}uA
-M7  vout  vbias2 vss   vss  NMOS  W=${fmt(s.W7, 2)}u  L=${fmt(s.L7, 2)}u
-CC  d2    vout   ${fmt(s.Cc, 2)}p                                          ; Miller compensation
-.op
-.ac dec 20 1 1g
-.ends`;
+        return `* RL-AmpSyn sizing — two-stage Miller-compensated op-amp
+* Target syntax: Synopsys PrimeSim HSPICE 2025.06 (formerly HSPICE)
+* NOTE: .MODEL cards below are illustrative LEVEL=54 stubs, not a fitted PDK —
+* swap in a foundry-calibrated model library before trusting simulated results.
+.PARAM VDD=${PROC.VDD}
+
+.MODEL NMOS NMOS LEVEL=54
+.MODEL PMOS PMOS LEVEL=54
+
+.SUBCKT TWOSTAGE_OPAMP vin+ vin- vout vdd vss
+M1  d1    vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M2  d2    vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M3  d1    d1     vdd   vdd  PMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.L3, 2)}U
+M4  d2    d1     vdd   vdd  PMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.L3, 2)}U
+M5  tail  vbias1 vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}U  L=${fmt(s.L1, 2)}U  $ tail, I=${fmt(s.Ibias1, 1)}uA
+M6  vout  d2     vdd   vdd  PMOS  W=${fmt(s.W6, 2)}U  L=${fmt(s.L6, 2)}U  $ 2nd stage, I=${fmt(s.Ibias2, 1)}uA
+M7  vout  vbias2 vss   vss  NMOS  W=${fmt(s.W7, 2)}U  L=${fmt(s.L7, 2)}U
+CC  d2    vout   ${fmt(s.Cc, 2)}P  $ Miller compensation
+.ENDS TWOSTAGE_OPAMP
+
+* Testbench — differential small-signal AC stimulus about VDD/2
+VDD  vdd  0    DC 'VDD'
+VSS  vss  0    DC 0
+VCM  vcm  0    DC 'VDD/2'
+VIP  vin+ vcm  DC 0 AC 0.5
+VIN  vin- vcm  DC 0 AC -0.5
+X1   vin+ vin- vout vdd vss TWOSTAGE_OPAMP
+
+.AC DEC 20 1 1G
+.OP
+.MEASURE AC gain_db  MAX VDB(vout)
+.MEASURE AC gbw_hz   WHEN VDB(vout)=0
+.MEASURE AC pm_deg   FIND VP(vout) WHEN VDB(vout)=0
+.END`;
       }
     },
     'telescopic': {
@@ -336,35 +370,59 @@ CC  d2    vout   ${fmt(s.Cc, 2)}p                                          ; Mil
         const RoutN = gmOf(p.gmidc, ID) * roOf(p.Lc, ID) * roOf(L1, ID);
         const Rout = RoutN / 2; // symmetric N/P cascode branches
         const gainDb = 20 * Math.log10(gm1 * Rout);
-        const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * p.CL * 1e-12) / 1e6;
+        const W1 = wOf(p.gmid1, ID, PROC.KN, L1);
+        const W3 = wOf(p.gmidc, ID, PROC.KN, p.Lc);
+        const W5 = wOf(p.gmidc, ID, PROC.KP, p.Lc);
+        const W7 = wOf(p.gmidc, ID, PROC.KP, p.Lc);
+        const cPar = cParOf(W3, p.Lc) + cParOf(W5, p.Lc); // pF, cascode output-node parasitic from sized devices
+        const cTotal = p.CL + cPar;
+        const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * cTotal * 1e-12) / 1e6;
         const powerMW = PROC.VDD * p.Ibias * 1e-3;
         const A0 = Math.pow(10, gainDb / 20);
         const fp1 = (bwMHz * 1e6) / A0;
         const sized = {
-          W1: wOf(p.gmid1, ID, PROC.KN, L1), L1,
-          W3: wOf(p.gmidc, ID, PROC.KN, p.Lc),
-          W5: wOf(p.gmidc, ID, PROC.KP, p.Lc),
-          W7: wOf(p.gmidc, ID, PROC.KP, p.Lc), Lc: p.Lc,
-          Ibias: p.Ibias, CL: p.CL
+          W1, L1, W3, W5, W7, Lc: p.Lc,
+          Ibias: p.Ibias, CL: p.CL, cPar
         };
         return { gainDb, bwMHz, powerMW, sized, poles: { fp1 } };
       },
       netlist(s) {
-        return `* Telescopic cascode op-amp — RL-AmpSyn sizing
-.subckt TELESCOPIC_OPAMP vin+ vin- vout vdd vss
-M1  d1n  vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M2  d2n  vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M9  tail vbias  vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}u  L=${fmt(s.L1, 2)}u  ; tail, I=${fmt(s.Ibias, 1)}uA
-M3  d1c  vbc_n  d1n   vss  NMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.Lc, 2)}u     ; NMOS cascode
-M4  vout vbc_n  d2n   vss  NMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.Lc, 2)}u
-M5  d1c  vbc_p  d1p   vdd  PMOS  W=${fmt(s.W5, 2)}u  L=${fmt(s.Lc, 2)}u     ; PMOS cascode
-M6  vout vbc_p  d2p   vdd  PMOS  W=${fmt(s.W5, 2)}u  L=${fmt(s.Lc, 2)}u
-M7  d1p  d1c    vdd   vdd  PMOS  W=${fmt(s.W7, 2)}u  L=${fmt(s.Lc, 2)}u     ; mirror
-M8  d2p  d1c    vdd   vdd  PMOS  W=${fmt(s.W7, 2)}u  L=${fmt(s.Lc, 2)}u
-CL  vout 0      ${fmt(s.CL, 2)}p
-.op
-.ac dec 20 1 1g
-.ends`;
+        return `* RL-AmpSyn sizing — telescopic cascode op-amp
+* Target syntax: Synopsys PrimeSim HSPICE 2025.06 (formerly HSPICE)
+* NOTE: .MODEL cards below are illustrative LEVEL=54 stubs, not a fitted PDK —
+* swap in a foundry-calibrated model library before trusting simulated results.
+.PARAM VDD=${PROC.VDD}
+
+.MODEL NMOS NMOS LEVEL=54
+.MODEL PMOS PMOS LEVEL=54
+
+.SUBCKT TELESCOPIC_OPAMP vin+ vin- vout vdd vss
+M1  d1n  vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M2  d2n  vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M9  tail vbias  vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}U  L=${fmt(s.L1, 2)}U  $ tail, I=${fmt(s.Ibias, 1)}uA
+M3  d1c  vbc_n  d1n   vss  NMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.Lc, 2)}U  $ NMOS cascode
+M4  vout vbc_n  d2n   vss  NMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.Lc, 2)}U
+M5  d1c  vbc_p  d1p   vdd  PMOS  W=${fmt(s.W5, 2)}U  L=${fmt(s.Lc, 2)}U  $ PMOS cascode
+M6  vout vbc_p  d2p   vdd  PMOS  W=${fmt(s.W5, 2)}U  L=${fmt(s.Lc, 2)}U
+M7  d1p  d1c    vdd   vdd  PMOS  W=${fmt(s.W7, 2)}U  L=${fmt(s.Lc, 2)}U  $ mirror
+M8  d2p  d1c    vdd   vdd  PMOS  W=${fmt(s.W7, 2)}U  L=${fmt(s.Lc, 2)}U
+CL  vout 0      ${fmt(s.CL, 2)}P
+.ENDS TELESCOPIC_OPAMP
+
+* Testbench — differential small-signal AC stimulus about VDD/2
+VDD  vdd  0    DC 'VDD'
+VSS  vss  0    DC 0
+VCM  vcm  0    DC 'VDD/2'
+VIP  vin+ vcm  DC 0 AC 0.5
+VIN  vin- vcm  DC 0 AC -0.5
+X1   vin+ vin- vout vdd vss TELESCOPIC_OPAMP
+
+.AC DEC 20 1 1G
+.OP
+.MEASURE AC gain_db  MAX VDB(vout)
+.MEASURE AC gbw_hz   WHEN VDB(vout)=0
+.MEASURE AC pm_deg   FIND VP(vout) WHEN VDB(vout)=0
+.END`;
       }
     },
     'folded': {
@@ -380,48 +438,75 @@ CL  vout 0      ${fmt(s.CL, 2)}p
         const RoutN = gmOf(p.gmidc, p.IbiasFold) * roOf(p.Lc, p.IbiasFold) * roOf(L1, ID);
         const Rout = RoutN / 2; // symmetric N/P cascode branches
         const gainDb = 20 * Math.log10(gm1 * Rout);
-        const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * p.CL * 1e-12) / 1e6;
+        const W1 = wOf(p.gmid1, ID, PROC.KN, L1);
+        const Wf = wOf(p.gmidc, p.IbiasFold, PROC.KP, p.Lc);
+        const W3 = wOf(p.gmidc, p.IbiasFold, PROC.KP, p.Lc);
+        const W5 = wOf(p.gmidc, p.IbiasFold, PROC.KN, p.Lc);
+        const W7 = wOf(p.gmidc, p.IbiasFold, PROC.KN, p.Lc);
+        const cPar = cParOf(W3, p.Lc) + cParOf(W5, p.Lc); // pF, cascode output-node parasitic from sized devices
+        const cTotal = p.CL + cPar;
+        const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * cTotal * 1e-12) / 1e6;
         const powerMW = PROC.VDD * (p.Ibias + 2 * p.IbiasFold) * 1e-3;
         const A0 = Math.pow(10, gainDb / 20);
         const fp1 = (bwMHz * 1e6) / A0;
         const sized = {
-          W1: wOf(p.gmid1, ID, PROC.KN, L1), L1,
-          Wf: wOf(p.gmidc, p.IbiasFold, PROC.KP, p.Lc),
-          W3: wOf(p.gmidc, p.IbiasFold, PROC.KP, p.Lc),
-          W5: wOf(p.gmidc, p.IbiasFold, PROC.KN, p.Lc),
-          W7: wOf(p.gmidc, p.IbiasFold, PROC.KN, p.Lc), Lc: p.Lc,
-          Ibias: p.Ibias, IbiasFold: p.IbiasFold, CL: p.CL
+          W1, L1, Wf, W3, W5, W7, Lc: p.Lc,
+          Ibias: p.Ibias, IbiasFold: p.IbiasFold, CL: p.CL, cPar
         };
         return { gainDb, bwMHz, powerMW, sized, poles: { fp1 } };
       },
       netlist(s) {
-        return `* Folded cascode op-amp — RL-AmpSyn sizing
-.subckt FOLDED_OPAMP vin+ vin- vout vdd vss
-M1  d1n  vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M2  d2n  vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}u  L=${fmt(s.L1, 2)}u
-M9  tail vbias  vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}u  L=${fmt(s.L1, 2)}u  ; input tail, I=${fmt(s.Ibias, 1)}uA
-M10 d1n  vbf    vdd   vdd  PMOS  W=${fmt(s.Wf, 2)}u  L=${fmt(s.Lc, 2)}u     ; fold source, I=${fmt(s.IbiasFold, 1)}uA
-M11 d2n  vbf    vdd   vdd  PMOS  W=${fmt(s.Wf, 2)}u  L=${fmt(s.Lc, 2)}u
-M3  d1c  vbc_p  d1n   vdd  PMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.Lc, 2)}u     ; PMOS cascode
-M4  vout vbc_p  d2n   vdd  PMOS  W=${fmt(s.W3, 2)}u  L=${fmt(s.Lc, 2)}u
-M5  d1c  vbc_n  d1p   vss  NMOS  W=${fmt(s.W5, 2)}u  L=${fmt(s.Lc, 2)}u     ; NMOS cascode
-M6  vout vbc_n  d2p   vss  NMOS  W=${fmt(s.W5, 2)}u  L=${fmt(s.Lc, 2)}u
-M7  d1p  d1c    vss   vss  NMOS  W=${fmt(s.W7, 2)}u  L=${fmt(s.Lc, 2)}u     ; mirror
-M8  d2p  d1c    vss   vss  NMOS  W=${fmt(s.W7, 2)}u  L=${fmt(s.Lc, 2)}u
-CL  vout 0      ${fmt(s.CL, 2)}p
-.op
-.ac dec 20 1 1g
-.ends`;
+        return `* RL-AmpSyn sizing — folded cascode op-amp
+* Target syntax: Synopsys PrimeSim HSPICE 2025.06 (formerly HSPICE)
+* NOTE: .MODEL cards below are illustrative LEVEL=54 stubs, not a fitted PDK —
+* swap in a foundry-calibrated model library before trusting simulated results.
+.PARAM VDD=${PROC.VDD}
+
+.MODEL NMOS NMOS LEVEL=54
+.MODEL PMOS PMOS LEVEL=54
+
+.SUBCKT FOLDED_OPAMP vin+ vin- vout vdd vss
+M1  d1n  vin+   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M2  d2n  vin-   tail  vss  NMOS  W=${fmt(s.W1, 2)}U  L=${fmt(s.L1, 2)}U
+M9  tail vbias  vss   vss  NMOS  W=${fmt(s.W1 * 1.6, 2)}U  L=${fmt(s.L1, 2)}U  $ input tail, I=${fmt(s.Ibias, 1)}uA
+M10 d1n  vbf    vdd   vdd  PMOS  W=${fmt(s.Wf, 2)}U  L=${fmt(s.Lc, 2)}U  $ fold source, I=${fmt(s.IbiasFold, 1)}uA
+M11 d2n  vbf    vdd   vdd  PMOS  W=${fmt(s.Wf, 2)}U  L=${fmt(s.Lc, 2)}U
+M3  d1c  vbc_p  d1n   vdd  PMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.Lc, 2)}U  $ PMOS cascode
+M4  vout vbc_p  d2n   vdd  PMOS  W=${fmt(s.W3, 2)}U  L=${fmt(s.Lc, 2)}U
+M5  d1c  vbc_n  d1p   vss  NMOS  W=${fmt(s.W5, 2)}U  L=${fmt(s.Lc, 2)}U  $ NMOS cascode
+M6  vout vbc_n  d2p   vss  NMOS  W=${fmt(s.W5, 2)}U  L=${fmt(s.Lc, 2)}U
+M7  d1p  d1c    vss   vss  NMOS  W=${fmt(s.W7, 2)}U  L=${fmt(s.Lc, 2)}U  $ mirror
+M8  d2p  d1c    vss   vss  NMOS  W=${fmt(s.W7, 2)}U  L=${fmt(s.Lc, 2)}U
+CL  vout 0      ${fmt(s.CL, 2)}P
+.ENDS FOLDED_OPAMP
+
+* Testbench — differential small-signal AC stimulus about VDD/2
+VDD  vdd  0    DC 'VDD'
+VSS  vss  0    DC 0
+VCM  vcm  0    DC 'VDD/2'
+VIP  vin+ vcm  DC 0 AC 0.5
+VIN  vin- vcm  DC 0 AC -0.5
+X1   vin+ vin- vout vdd vss FOLDED_OPAMP
+
+.AC DEC 20 1 1G
+.OP
+.MEASURE AC gain_db  MAX VDB(vout)
+.MEASURE AC gbw_hz   WHEN VDB(vout)=0
+.MEASURE AC pm_deg   FIND VP(vout) WHEN VDB(vout)=0
+.END`;
       }
     }
   };
 
-  // Greedy random-walk search: each candidate perturbs the current best-known
-  // point by a step that shrinks (but never to zero) over the run, so early
-  // attempts explore widely — and can genuinely miss a user-set target — while
-  // later ones refine around whatever is working. There is no fixed "known
-  // answer" being converged toward; an unreachable target for a topology
-  // legitimately fails to fully converge.
+  // Simulated annealing: each candidate perturbs the current point by a step
+  // that shrinks (but never to zero) over the run. A strictly better candidate
+  // is always accepted; a worse one is accepted anyway with Metropolis
+  // probability exp(-delta/T), where T cools geometrically over the run — so
+  // early attempts can climb out of a bad neighborhood, and by the end the
+  // search behaves greedily. There is no fixed "known answer" being converged
+  // toward; an unreachable target for a topology legitimately fails to converge.
+  const SA_T0 = 1.4, SA_T_MIN = 0.04;
+
   function perturb(topo, current, factor) {
     const p = {};
     for (const k in topo.spread) {
@@ -500,19 +585,24 @@ CL  vout 0      ${fmt(s.CL, 2)}p
         if (i === 1) outStatus.textContent = 'sizing…';
         if (i === attempts - 2) outStatus.textContent = 'verifying…';
 
-        const exploreFactor = 1 - (i / (attempts - 1)) * 0.75; // narrows, never to zero — stays a genuine search
+        const t = i / (attempts - 1);
+        const T = SA_T0 * Math.pow(SA_T_MIN / SA_T0, t);
+        const exploreFactor = 1 - t * 0.7; // narrows, never to zero — stays a genuine search
         const candidate = perturb(topo, current, exploreFactor);
         const r = topo.evaluate(candidate);
         const score = scoreOf(spec, r);
         const ok = score === 0;
-        if (score < currentScore) { current = candidate; currentResult = r; currentScore = score; }
+        const delta = score - currentScore;
+        const annealed = delta >= 0 && Math.random() < Math.exp(-delta / T);
+        if (delta < 0 || annealed) { current = candidate; currentResult = r; currentScore = score; }
         if (score < best.score) best = { result: r, score };
 
         const row = document.createElement('div');
         row.className = 'demo-log-row' + (ok ? ' pass' : '');
+        const saNote = annealed ? ` · SA kept it anyway (T=${T.toFixed(2)})` : '';
         row.innerHTML = `<span class="lr-tag">${ok ? '✓' : '✗'}</span>` +
           `<span>iter ${i + 1} — gain ${fmt(r.gainDb, 1)} dB · bw ${fmt(r.bwMHz, 1)} MHz · power ${fmt(r.powerMW, 2)} mW` +
-          `${ok ? ' — meets spec' : ' — rejected'}</span>`;
+          `${ok ? ' — meets spec' : ' — rejected'}${saNote}</span>`;
         demoLog.appendChild(row);
 
         if (i === attempts - 1) {
