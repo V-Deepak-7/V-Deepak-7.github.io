@@ -248,9 +248,11 @@
   /* ---------- RL-AmpSyn demo: gm/ID sizing search + SPICE netlist ----------
      A closed-form gm/ID small-signal model (gm = (gm/ID)·ID, ro = VA'·L/ID),
      with a first-order device-geometry parasitic estimate at the output node.
-     "Synthesize" runs real simulated annealing (Metropolis acceptance, see
-     SA_T0/SA_T_MIN below) over that model to hit a user-editable target spec.
-     This is NOT a SPICE simulation — see the disclosure note in the panel. */
+     "Synthesize" runs real policy-gradient RL (batched REINFORCE with a
+     baseline, see RL_ALPHA/RL_BATCH below) over that model to hit a
+     user-editable target spec. This is NOT a SPICE simulation, and it is
+     a simplified single-agent stand-in for the full multi-step pipeline in
+     the actual paper — see the disclosure note in the panel. */
   const synthesizeBtn = document.getElementById('synthesizeBtn');
   const topologySelect = document.getElementById('topologySelect');
   const glyphSegs = document.querySelectorAll('.glyph-seg');
@@ -284,7 +286,6 @@
   // as a fraction of gate cap — not an extracted BSIM parasitic, but scales with the
   // actual sized W·L so bigger output devices genuinely cost bandwidth/phase margin.
   const cParOf = (wUM, lUM) => (0.4 * PROC.COX * wUM * lUM) / 1000; // pF
-  const rand = (min, max) => min + Math.random() * (max - min);
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (n, d) => n.toFixed(d);
 
@@ -498,24 +499,24 @@ X1   vin+ vin- vout vdd vss FOLDED_OPAMP
     }
   };
 
-  // Simulated annealing: each candidate perturbs the current point by a step
-  // that shrinks (but never to zero) over the run. A strictly better candidate
-  // is always accepted; a worse one is accepted anyway with Metropolis
-  // probability exp(-delta/T), where T cools geometrically over the run — so
-  // early attempts can climb out of a bad neighborhood, and by the end the
-  // search behaves greedily. There is no fixed "known answer" being converged
-  // toward; an unreachable target for a topology legitimately fails to converge.
-  const SA_T0 = 1.4, SA_T_MIN = 0.04;
+  // Policy-gradient (REINFORCE) search: a Gaussian policy over the sizing
+  // parameters draws a batch of candidates each step; the policy mean is
+  // nudged toward whichever candidates scored above the batch's own average
+  // reward (a baseline-subtracted advantage — standard variance reduction),
+  // and away from those below it. Exploration (the policy's std-dev) shrinks
+  // over the run. This is a simplified, single-agent stand-in for the actual
+  // multi-step agentic RL pipeline in the published RL-AmpSyn paper — real
+  // policy-gradient RL, not a relabeled search, but not a reproduction of
+  // that trained system either. An unreachable target legitimately fails
+  // to converge; there is no fixed "known answer" being steered toward.
+  const RL_ALPHA = 2.5, RL_BATCH = 6;
 
-  function perturb(topo, current, factor) {
-    const p = {};
-    for (const k in topo.spread) {
-      const v = current[k] + rand(-1, 1) * topo.spread[k] * factor;
-      const b = topo.bounds[k];
-      p[k] = b ? clamp(v, b[0], b[1]) : v;
-    }
-    return p;
+  function rlGaussian() { // Box-Muller
+    const u1 = Math.random(), u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   }
+
+  function rewardOf(score) { return 1 / (1 + score); }
 
   function scoreOf(spec, r) {
     const gainViol = Math.max(0, spec.gainMin - r.gainDb);
@@ -571,41 +572,54 @@ X1   vin+ vin- vout vdd vss FOLDED_OPAMP
     synthesizeBtn.disabled = true;
     const topo = TOPOLOGIES[topologySelect.value];
     const spec = getUserSpec();
-    const attempts = glyphSegs.length; // one sizing candidate per glyph segment
+    const steps = glyphSegs.length; // one policy update per glyph segment
     const stageDelay = reduceMotion ? 0 : 320;
 
-    let current = topo.base;
-    let currentResult = topo.evaluate(current);
-    let currentScore = scoreOf(spec, currentResult);
-    let best = { result: currentResult, score: currentScore };
+    const mu = { ...topo.base };
+    let best = { result: topo.evaluate(mu), score: scoreOf(spec, topo.evaluate(mu)) };
 
-    for (let i = 0; i < attempts; i++) {
+    for (let i = 0; i < steps; i++) {
       setTimeout(() => {
         glyphSegs[i].classList.add('lit');
         if (i === 1) outStatus.textContent = 'sizing…';
-        if (i === attempts - 2) outStatus.textContent = 'verifying…';
+        if (i === steps - 2) outStatus.textContent = 'verifying…';
 
-        const t = i / (attempts - 1);
-        const T = SA_T0 * Math.pow(SA_T_MIN / SA_T0, t);
-        const exploreFactor = 1 - t * 0.7; // narrows, never to zero — stays a genuine search
-        const candidate = perturb(topo, current, exploreFactor);
-        const r = topo.evaluate(candidate);
-        const score = scoreOf(spec, r);
-        const ok = score === 0;
-        const delta = score - currentScore;
-        const annealed = delta >= 0 && Math.random() < Math.exp(-delta / T);
-        if (delta < 0 || annealed) { current = candidate; currentResult = r; currentScore = score; }
-        if (score < best.score) best = { result: r, score };
+        const decay = 1 - (i / (steps - 1)) * 0.65; // policy std-dev shrinks, never to zero
+        const batch = [];
+        for (let b = 0; b < RL_BATCH; b++) {
+          const action = {};
+          for (const k in mu) {
+            const s = topo.spread[k] * decay;
+            const a = mu[k] + rlGaussian() * s;
+            const bnd = topo.bounds[k];
+            action[k] = bnd ? clamp(a, bnd[0], bnd[1]) : a;
+          }
+          const r = topo.evaluate(action);
+          const score = scoreOf(spec, r);
+          batch.push({ action, r, score, reward: rewardOf(score) });
+          if (score < best.score) best = { result: r, score };
+        }
+        const baseline = batch.reduce((s, x) => s + x.reward, 0) / batch.length;
+        for (const k in mu) {
+          let grad = 0;
+          for (const x of batch) grad += (x.reward - baseline) * (x.action[k] - mu[k]);
+          grad /= batch.length;
+          const bnd = topo.bounds[k];
+          const nv = mu[k] + RL_ALPHA * grad;
+          mu[k] = bnd ? clamp(nv, bnd[0], bnd[1]) : nv;
+        }
+        const top = batch.reduce((a, c) => (c.reward > a.reward ? c : a));
+        const ok = top.score === 0;
 
         const row = document.createElement('div');
         row.className = 'demo-log-row' + (ok ? ' pass' : '');
-        const saNote = annealed ? ` · SA kept it anyway (T=${T.toFixed(2)})` : '';
         row.innerHTML = `<span class="lr-tag">${ok ? '✓' : '✗'}</span>` +
-          `<span>iter ${i + 1} — gain ${fmt(r.gainDb, 1)} dB · bw ${fmt(r.bwMHz, 1)} MHz · power ${fmt(r.powerMW, 2)} mW` +
-          `${ok ? ' — meets spec' : ' — rejected'}${saNote}</span>`;
+          `<span>iter ${i + 1} — reward ${fmt(top.reward, 2)} (batch avg ${fmt(baseline, 2)}) — ` +
+          `gain ${fmt(top.r.gainDb, 1)} dB · bw ${fmt(top.r.bwMHz, 1)} MHz · power ${fmt(top.r.powerMW, 2)} mW` +
+          `${ok ? ' — meets spec' : ''}</span>`;
         demoLog.appendChild(row);
 
-        if (i === attempts - 1) {
+        if (i === steps - 1) {
           const r2 = best.result;
           const metSpec = best.score === 0;
           outGain.textContent = fmt(r2.gainDb, 1) + ' dB';

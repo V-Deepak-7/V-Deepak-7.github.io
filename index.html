@@ -99,19 +99,22 @@
 
     <div class="demo-panel">
       <div class="demo-disclosure mono">
-        <p class="disclosure-summary">ⓘ Closed-form gm/ID model with first-order parasitics, optimized by simulated annealing — not a SPICE simulation.
+        <p class="disclosure-summary">ⓘ Closed-form gm/ID model with first-order parasitics, sized by a simplified policy-gradient RL search — not a SPICE simulation.
           <button type="button" id="disclosureToggle" class="disclosure-toggle">details ▾</button></p>
         <div class="disclosure-body" id="disclosureBody" hidden>
           <p>Gain, bandwidth, and power come from a closed-form small-signal model
             (gm = (gm/ID)·ID, ro = VA'·L/ID), with a first-order parasitic capacitance
             estimate (≈0.4·Cox·W·L at the relevant output node, plus an assumed external
-            load) feeding into bandwidth and phase margin. Sizing is a simulated-annealing
-            search (Metropolis acceptance) over this analytic model — visible in the log
-            below as moves the search keeps despite a worse score. None of this is an
-            actual SPICE run: no BSIM device models, no mismatch, no noise, no layout or
-            routing parasitics, no process corners. The netlist is generated from the
-            search result in HSPICE-compatible syntax as a reproducible starting point —
-            treat it as a hand-calculated sizing to verify in a real simulator, not as
+            load) feeding into bandwidth and phase margin. Sizing is real batched
+            REINFORCE — a Gaussian policy over the sizing parameters, updated toward
+            candidates that beat the batch's own average reward — visible in the log
+            below as the reward and batch average each step. It's a simplified,
+            single-agent stand-in for the multi-step agentic RL pipeline in the actual
+            published paper, not a reproduction of it. None of this is an actual SPICE
+            run: no BSIM device models, no mismatch, no noise, no layout or routing
+            parasitics, no process corners. The netlist is generated from the search
+            result in HSPICE-compatible syntax as a reproducible starting point — treat
+            it as a hand-calculated sizing to verify in a real simulator, not as
             simulated output.</p>
         </div>
       </div>
