@@ -202,7 +202,20 @@ section, footer.contact { padding: 96px 0; }
 
 .glyph-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-bottom: 26px; }
 
-.demo-spec { font-size: 11px; color: var(--text-muted); margin-bottom: 18px; }
+.demo-spec-editor { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 26px; font-size: 12px; }
+.spec-field { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.spec-field label { white-space: nowrap; }
+.spec-field input {
+  width: 48px; background: var(--bg); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 4px; padding: 5px 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align: right;
+}
+.spec-field input:focus { outline: none; border-color: var(--node); }
+.spec-unit { color: var(--text-muted); }
+.spec-reset {
+  background: none; border: none; color: var(--text-muted); font-size: 11px; text-decoration: underline;
+  text-underline-offset: 3px; cursor: pointer; padding: 0; margin-left: auto;
+}
+.spec-reset:hover { color: var(--text-primary); }
 
 .demo-readout { border-top: 1px solid var(--border); padding-top: 18px; display: grid; gap: 10px; max-width: 320px; }
 .readout-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
@@ -213,6 +226,20 @@ section, footer.contact { padding: 96px 0; }
 .demo-log-row .lr-tag { flex-shrink: 0; width: 12px; }
 .demo-log-row.pass { color: var(--node); }
 .demo-log-row.pass .lr-tag { color: var(--node-bright); }
+
+.demo-bode { border-top: 1px solid var(--border); margin-top: 22px; padding-top: 18px; }
+.bode-chart { width: 100%; }
+.bode-chart .bc-grid { stroke: var(--border); stroke-width: 1; }
+.bode-chart .bc-zero { stroke: var(--text-muted); stroke-width: 1; opacity: 0.5; }
+.bode-chart .bc-curve { fill: none; stroke: var(--node); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.bode-chart .bc-axis-label { fill: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 8.5px; }
+.bode-chart .bc-callout { fill: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+.bode-chart .bc-mark { fill: var(--node-bright); }
+.bode-chart .bc-mark-ring { fill: var(--bg-alt); }
+.bode-chart .bc-crosshair { stroke: var(--text-muted); stroke-width: 1; opacity: 0; pointer-events: none; }
+.bode-chart .bc-tooltip { fill: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 9px; opacity: 0; pointer-events: none; }
+.bode-chart .bc-hit { fill: transparent; }
+.bode-empty { font-size: 11.5px; color: var(--text-muted); padding: 8px 0; }
 
 .demo-netlist { border-top: 1px solid var(--border); margin-top: 22px; padding-top: 18px; }
 .netlist-label { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; }

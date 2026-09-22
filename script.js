@@ -259,9 +259,14 @@
   const outBw = document.getElementById('outBw');
   const outPower = document.getElementById('outPower');
   const outStatus = document.getElementById('outStatus');
-  const demoSpec = document.getElementById('demoSpec');
   const demoLog = document.getElementById('demoLog');
   const netlistOut = document.getElementById('netlistOut');
+  const bodeChartEl = document.getElementById('bodeChart');
+  const specGainMinEl = document.getElementById('specGainMin');
+  const specBwMinEl = document.getElementById('specBwMin');
+  const specBwMaxEl = document.getElementById('specBwMax');
+  const specPowerMaxEl = document.getElementById('specPowerMax');
+  const specResetBtn = document.getElementById('specResetBtn');
 
   const PROC = { KN: 220, KP: 90, VA: 8.0, VDD: 1.8 }; // uA/V^2, V/um (Early voltage coeff.), V — illustrative process corner
 
@@ -269,14 +274,17 @@
   const roOf = (lUM, idUA) => PROC.VA * lUM / idUA;                            // MOhm
   const wOf = (gmid, idUA, k, lUM) => ((gmid * gmid * idUA) / (2 * k)) * lUM;  // um
   const rand = (min, max) => min + Math.random() * (max - min);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const fmt = (n, d) => n.toFixed(d);
 
   const TOPOLOGIES = {
     'two-stage': {
       spec: { gainMin: 62, bwMin: 3, bwMax: 6, powerMax: 0.6 },
       base: { gmid1: 14, L3: 1.5, Ibias1: 40, gmid6: 8, L6: 1.5, L7: 1.5, Ibias2: 150, Cc: 11 },
-      spread: { gmid1: 3, L3: 0.5, Ibias1: 15, gmid6: 2.5, L6: 0.5, L7: 0.5, Ibias2: 60, Cc: 5 },
+      spread: { gmid1: 3.5, L3: 0.6, Ibias1: 25, gmid6: 3, L6: 0.6, L7: 0.6, Ibias2: 90, Cc: 7 },
+      bounds: { gmid1: [6, 22], L3: [0.5, 3], Ibias1: [8, 200], gmid6: [4, 16], L6: [0.5, 3], L7: [0.5, 3], Ibias2: [30, 500], Cc: [1, 40] },
       fixed: { L1: 0.5 },
+      poleCL2: 18, // pF — assumed output loading setting the non-dominant pole (~2-3x GBW, typical compensation target)
       evaluate(p) {
         const L1 = this.fixed.L1;
         const ID1 = p.Ibias1 / 2;
@@ -287,6 +295,9 @@
         const gainDb = 20 * Math.log10(gm1 * Rout1 * gm6 * Rout2);
         const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * p.Cc * 1e-12) / 1e6;
         const powerMW = PROC.VDD * (p.Ibias1 + p.Ibias2) * 1e-3;
+        const A0 = Math.pow(10, gainDb / 20);
+        const fp1 = (bwMHz * 1e6) / A0;
+        const fp2 = (gm6 * 1e-6) / (2 * Math.PI * this.poleCL2 * 1e-12);
         const sized = {
           W1: wOf(p.gmid1, ID1, PROC.KN, L1), L1,
           W3: wOf(p.gmid1, ID1, PROC.KP, p.L3), L3: p.L3,
@@ -294,7 +305,7 @@
           W7: wOf(p.gmid6, p.Ibias2, PROC.KN, p.L7), L7: p.L7,
           Ibias1: p.Ibias1, Ibias2: p.Ibias2, Cc: p.Cc
         };
-        return { gainDb, bwMHz, powerMW, sized };
+        return { gainDb, bwMHz, powerMW, sized, poles: { fp1, fp2 } };
       },
       netlist(s) {
         return `* Two-stage Miller-compensated op-amp — RL-AmpSyn sizing
@@ -315,7 +326,8 @@ CC  d2    vout   ${fmt(s.Cc, 2)}p                                          ; Mil
     'telescopic': {
       spec: { gainMin: 55, bwMin: 6, bwMax: 14, powerMax: 0.7 },
       base: { gmid1: 13, gmidc: 9, Lc: 0.6, Ibias: 220, CL: 28 },
-      spread: { gmid1: 3, gmidc: 2.5, Lc: 0.2, Ibias: 80, CL: 12 },
+      spread: { gmid1: 3.5, gmidc: 3, Lc: 0.25, Ibias: 120, CL: 16 },
+      bounds: { gmid1: [6, 22], gmidc: [5, 18], Lc: [0.35, 2], Ibias: [40, 600], CL: [1, 60] },
       fixed: { L1: 0.4 },
       evaluate(p) {
         const L1 = this.fixed.L1;
@@ -326,6 +338,8 @@ CC  d2    vout   ${fmt(s.Cc, 2)}p                                          ; Mil
         const gainDb = 20 * Math.log10(gm1 * Rout);
         const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * p.CL * 1e-12) / 1e6;
         const powerMW = PROC.VDD * p.Ibias * 1e-3;
+        const A0 = Math.pow(10, gainDb / 20);
+        const fp1 = (bwMHz * 1e6) / A0;
         const sized = {
           W1: wOf(p.gmid1, ID, PROC.KN, L1), L1,
           W3: wOf(p.gmidc, ID, PROC.KN, p.Lc),
@@ -333,7 +347,7 @@ CC  d2    vout   ${fmt(s.Cc, 2)}p                                          ; Mil
           W7: wOf(p.gmidc, ID, PROC.KP, p.Lc), Lc: p.Lc,
           Ibias: p.Ibias, CL: p.CL
         };
-        return { gainDb, bwMHz, powerMW, sized };
+        return { gainDb, bwMHz, powerMW, sized, poles: { fp1 } };
       },
       netlist(s) {
         return `* Telescopic cascode op-amp — RL-AmpSyn sizing
@@ -356,7 +370,8 @@ CL  vout 0      ${fmt(s.CL, 2)}p
     'folded': {
       spec: { gainMin: 52, bwMin: 6, bwMax: 16, powerMax: 1.0 },
       base: { gmid1: 13, gmidc: 9, Lc: 0.6, Ibias: 150, IbiasFold: 110, CL: 18 },
-      spread: { gmid1: 3, gmidc: 2.5, Lc: 0.2, Ibias: 55, IbiasFold: 40, CL: 8 },
+      spread: { gmid1: 3.5, gmidc: 3, Lc: 0.25, Ibias: 70, IbiasFold: 55, CL: 11 },
+      bounds: { gmid1: [6, 22], gmidc: [5, 18], Lc: [0.35, 2], Ibias: [30, 400], IbiasFold: [20, 300], CL: [1, 50] },
       fixed: { L1: 0.4 },
       evaluate(p) {
         const L1 = this.fixed.L1;
@@ -367,6 +382,8 @@ CL  vout 0      ${fmt(s.CL, 2)}p
         const gainDb = 20 * Math.log10(gm1 * Rout);
         const bwMHz = (gm1 * 1e-6) / (2 * Math.PI * p.CL * 1e-12) / 1e6;
         const powerMW = PROC.VDD * (p.Ibias + 2 * p.IbiasFold) * 1e-3;
+        const A0 = Math.pow(10, gainDb / 20);
+        const fp1 = (bwMHz * 1e6) / A0;
         const sized = {
           W1: wOf(p.gmid1, ID, PROC.KN, L1), L1,
           Wf: wOf(p.gmidc, p.IbiasFold, PROC.KP, p.Lc),
@@ -375,7 +392,7 @@ CL  vout 0      ${fmt(s.CL, 2)}p
           W7: wOf(p.gmidc, p.IbiasFold, PROC.KN, p.Lc), Lc: p.Lc,
           Ibias: p.Ibias, IbiasFold: p.IbiasFold, CL: p.CL
         };
-        return { gainDb, bwMHz, powerMW, sized };
+        return { gainDb, bwMHz, powerMW, sized, poles: { fp1 } };
       },
       netlist(s) {
         return `* Folded cascode op-amp — RL-AmpSyn sizing
@@ -399,19 +416,51 @@ CL  vout 0      ${fmt(s.CL, 2)}p
     }
   };
 
-  function sampleAt(topo, t) {
-    const decay = (1 - t) * (1 - t); // exploration collapses to the known-good point by the final attempt
+  // Greedy random-walk search: each candidate perturbs the current best-known
+  // point by a step that shrinks (but never to zero) over the run, so early
+  // attempts explore widely — and can genuinely miss a user-set target — while
+  // later ones refine around whatever is working. There is no fixed "known
+  // answer" being converged toward; an unreachable target for a topology
+  // legitimately fails to fully converge.
+  function perturb(topo, current, factor) {
     const p = {};
-    for (const k in topo.base) p[k] = topo.base[k] + rand(-1, 1) * topo.spread[k] * decay;
+    for (const k in topo.spread) {
+      const v = current[k] + rand(-1, 1) * topo.spread[k] * factor;
+      const b = topo.bounds[k];
+      p[k] = b ? clamp(v, b[0], b[1]) : v;
+    }
     return p;
   }
 
-  function passSpec(spec, r) {
-    return r.gainDb >= spec.gainMin && r.bwMHz >= spec.bwMin && r.bwMHz <= spec.bwMax && r.powerMW <= spec.powerMax;
+  function scoreOf(spec, r) {
+    const gainViol = Math.max(0, spec.gainMin - r.gainDb);
+    const bwViol = Math.max(0, spec.bwMin - r.bwMHz) + Math.max(0, r.bwMHz - spec.bwMax);
+    const powerViol = Math.max(0, r.powerMW - spec.powerMax);
+    return gainViol / 5 + bwViol / 2 + powerViol / 0.3;
   }
 
-  function specLine(spec) {
-    return `target — gain ≥ ${spec.gainMin} dB · BW ${spec.bwMin}–${spec.bwMax} MHz · power ≤ ${spec.powerMax} mW`;
+  function getUserSpec() {
+    let gainMin = parseFloat(specGainMinEl.value);
+    let bwMin = parseFloat(specBwMinEl.value);
+    let bwMax = parseFloat(specBwMaxEl.value);
+    let powerMax = parseFloat(specPowerMaxEl.value);
+    if (!isFinite(gainMin)) gainMin = 30;
+    if (!isFinite(bwMin)) bwMin = 0.5;
+    if (!isFinite(bwMax)) bwMax = 60;
+    if (!isFinite(powerMax)) powerMax = 3;
+    gainMin = clamp(gainMin, 30, 90);
+    bwMin = clamp(bwMin, 0.5, 60);
+    bwMax = clamp(bwMax, 0.5, 60);
+    powerMax = clamp(powerMax, 0.05, 3);
+    if (bwMin > bwMax) { const t = bwMin; bwMin = bwMax; bwMax = t; }
+    return { gainMin, bwMin, bwMax, powerMax };
+  }
+
+  function applyDefaultSpec(topo) {
+    specGainMinEl.value = topo.spec.gainMin;
+    specBwMinEl.value = topo.spec.bwMin;
+    specBwMaxEl.value = topo.spec.bwMax;
+    specPowerMaxEl.value = topo.spec.powerMax;
   }
 
   function resetDemo() {
@@ -420,24 +469,30 @@ CL  vout 0      ${fmt(s.CL, 2)}p
     outStatus.textContent = 'idle';
     demoLog.innerHTML = '';
     netlistOut.textContent = '— run synthesis to generate —';
+    bodeChartEl.innerHTML = '<p class="bode-empty mono">— run synthesis to generate —</p>';
   }
 
-  function refreshSpec() {
-    demoSpec.textContent = specLine(TOPOLOGIES[topologySelect.value].spec);
-  }
-
-  refreshSpec();
+  applyDefaultSpec(TOPOLOGIES[topologySelect.value]);
   resetDemo();
-  topologySelect.addEventListener('change', () => { refreshSpec(); resetDemo(); });
+  topologySelect.addEventListener('change', () => {
+    applyDefaultSpec(TOPOLOGIES[topologySelect.value]);
+    resetDemo();
+  });
+  specResetBtn.addEventListener('click', () => applyDefaultSpec(TOPOLOGIES[topologySelect.value]));
 
   synthesizeBtn.addEventListener('click', () => {
     resetDemo();
     outStatus.textContent = 'searching topology…';
     synthesizeBtn.disabled = true;
     const topo = TOPOLOGIES[topologySelect.value];
+    const spec = getUserSpec();
     const attempts = glyphSegs.length; // one sizing candidate per glyph segment
     const stageDelay = reduceMotion ? 0 : 320;
-    let finalResult = null;
+
+    let current = topo.base;
+    let currentResult = topo.evaluate(current);
+    let currentScore = scoreOf(spec, currentResult);
+    let best = { result: currentResult, score: currentScore };
 
     for (let i = 0; i < attempts; i++) {
       setTimeout(() => {
@@ -445,9 +500,13 @@ CL  vout 0      ${fmt(s.CL, 2)}p
         if (i === 1) outStatus.textContent = 'sizing…';
         if (i === attempts - 2) outStatus.textContent = 'verifying…';
 
-        const r = topo.evaluate(sampleAt(topo, i / (attempts - 1)));
-        const ok = passSpec(topo.spec, r);
-        if (ok && !finalResult) finalResult = r;
+        const exploreFactor = 1 - (i / (attempts - 1)) * 0.75; // narrows, never to zero — stays a genuine search
+        const candidate = perturb(topo, current, exploreFactor);
+        const r = topo.evaluate(candidate);
+        const score = scoreOf(spec, r);
+        const ok = score === 0;
+        if (score < currentScore) { current = candidate; currentResult = r; currentScore = score; }
+        if (score < best.score) best = { result: r, score };
 
         const row = document.createElement('div');
         row.className = 'demo-log-row' + (ok ? ' pass' : '');
@@ -457,15 +516,147 @@ CL  vout 0      ${fmt(s.CL, 2)}p
         demoLog.appendChild(row);
 
         if (i === attempts - 1) {
-          const r2 = finalResult || topo.evaluate(topo.base);
+          const r2 = best.result;
+          const metSpec = best.score === 0;
           outGain.textContent = fmt(r2.gainDb, 1) + ' dB';
           outBw.textContent = fmt(r2.bwMHz, 1) + ' MHz';
           outPower.textContent = fmt(r2.powerMW, 2) + ' mW';
-          outStatus.textContent = 'verified';
+          outStatus.textContent = metSpec ? 'verified' : 'spec not met — closest result';
           netlistOut.textContent = topo.netlist(r2.sized);
+          buildBodeChart(r2);
           synthesizeBtn.disabled = false;
         }
       }, i * stageDelay);
     }
   });
+
+  /* ---------- Bode chart: closed-form AC response from the sized poles ---------- */
+  function buildBodeChart(result) {
+    const A0 = Math.pow(10, result.gainDb / 20);
+    const fp1 = result.poles.fp1;
+    const fp2 = result.poles.fp2;
+
+    const FMIN = 1e3, FMAX = 1e9, N = 140;
+    const freqs = [], mags = [], phases = [];
+    for (let i = 0; i <= N; i++) {
+      const f = Math.pow(10, 3 + (i / N) * 6);
+      let m = 20 * Math.log10(A0) - 20 * Math.log10(Math.sqrt(1 + (f / fp1) ** 2));
+      let ph = -Math.atan(f / fp1) * 180 / Math.PI;
+      if (fp2) { m -= 20 * Math.log10(Math.sqrt(1 + (f / fp2) ** 2)); ph -= Math.atan(f / fp2) * 180 / Math.PI; }
+      freqs.push(f); mags.push(m); phases.push(ph);
+    }
+
+    let crossIdx = -1;
+    for (let i = 1; i <= N; i++) { if (mags[i - 1] >= 0 && mags[i] < 0) { crossIdx = i; break; } }
+    let fCross = freqs[N], phAtCross = phases[N];
+    if (crossIdx > 0) {
+      const m0 = mags[crossIdx - 1], m1 = mags[crossIdx];
+      const frac = m0 / (m0 - m1);
+      fCross = Math.pow(10, Math.log10(freqs[crossIdx - 1]) + frac * (Math.log10(freqs[crossIdx]) - Math.log10(freqs[crossIdx - 1])));
+      phAtCross = phases[crossIdx - 1] + frac * (phases[crossIdx] - phases[crossIdx - 1]);
+    }
+    const phaseMargin = 180 + phAtCross;
+
+    renderBodeSVG(freqs, mags, phases, fCross, phaseMargin);
+  }
+
+  function renderBodeSVG(freqs, mags, phases, fCross, phaseMargin) {
+    const W = 600, PAD_L = 36, PAD_R = 10;
+    const plotW = W - PAD_L - PAD_R;
+    const xPix = f => PAD_L + ((Math.log10(f) - 3) / 6) * plotW;
+
+    const magH = 128, magPadT = 10, magPadB = 14;
+    const magPlotH = magH - magPadT - magPadB;
+    const magMax = Math.max(10, Math.ceil((Math.max(...mags, 0) + 5) / 10) * 10);
+    const magMin = Math.min(-10, Math.floor((Math.min(...mags, 0) - 5) / 10) * 10);
+    const magY = db => magPadT + ((magMax - db) / (magMax - magMin)) * magPlotH;
+
+    const phH = 116, phPadT = 8, phPadB = 24;
+    const phPlotH = phH - phPadT - phPadB;
+    const phMax = 30;
+    const phMin = Math.min(-180, Math.floor((Math.min(...phases) - 10) / 30) * 30);
+    const phY = deg => phPadT + ((phMax - deg) / (phMax - phMin)) * phPlotH;
+
+    const decades = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9];
+    const decadeLabels = ['1k', '10k', '100k', '1M', '10M', '100M', '1G'];
+
+    const magPath = freqs.map((f, i) => `${i === 0 ? 'M' : 'L'}${xPix(f).toFixed(1)},${magY(mags[i]).toFixed(1)}`).join(' ');
+    const phPath = freqs.map((f, i) => `${i === 0 ? 'M' : 'L'}${xPix(f).toFixed(1)},${phY(phases[i]).toFixed(1)}`).join(' ');
+
+    const magVGrid = decades.map(f => `<line class="bc-grid" x1="${xPix(f)}" y1="${magPadT}" x2="${xPix(f)}" y2="${magH - magPadB}"/>`).join('');
+    const phVGrid = decades.map(f => `<line class="bc-grid" x1="${xPix(f)}" y1="${phPadT}" x2="${xPix(f)}" y2="${phH - phPadB}"/>`).join('');
+    const xLabels = decades.map((f, i) => `<text class="bc-axis-label" x="${xPix(f)}" y="${phH - 6}" text-anchor="middle">${decadeLabels[i]}</text>`).join('');
+
+    const crossX = xPix(clamp(fCross, 1e3, 1e9));
+    const crossLabel = fCross >= 1e6 ? `${fmt(fCross / 1e6, 1)} MHz` : `${fmt(fCross / 1e3, 0)} kHz`;
+
+    bodeChartEl.innerHTML = `
+      <svg class="bode-chart" id="bcMag" viewBox="0 0 ${W} ${magH}" preserveAspectRatio="none">
+        ${magVGrid}
+        <line class="bc-zero" x1="${PAD_L}" y1="${magY(0)}" x2="${W - PAD_R}" y2="${magY(0)}"/>
+        <text class="bc-axis-label" x="4" y="${magPadT + 4}">${magMax}dB</text>
+        <text class="bc-axis-label" x="4" y="${magY(0) + 3}">0dB</text>
+        <text class="bc-axis-label" x="4" y="${magH - magPadB}">${magMin}dB</text>
+        <path class="bc-curve" d="${magPath}"/>
+        <circle class="bc-mark" cx="${crossX}" cy="${magY(0)}" r="3"/>
+        <text class="bc-callout" x="${clamp(crossX + 8, 0, W - 90)}" y="${magY(0) - 6}">GBW ≈ ${crossLabel}</text>
+        <line class="bc-crosshair" id="bcMagCross" x1="0" y1="${magPadT}" x2="0" y2="${magH - magPadB}"/>
+        <text class="bc-tooltip" id="bcMagTip" x="0" y="${magPadT + 10}"></text>
+        <rect class="bc-hit" id="bcMagHit" x="${PAD_L}" y="0" width="${plotW}" height="${magH}"/>
+      </svg>
+      <svg class="bode-chart" id="bcPhase" viewBox="0 0 ${W} ${phH}" preserveAspectRatio="none">
+        ${phVGrid}
+        <line class="bc-zero" x1="${PAD_L}" y1="${phY(0)}" x2="${W - PAD_R}" y2="${phY(0)}"/>
+        <line class="bc-zero" x1="${PAD_L}" y1="${phY(-90)}" x2="${W - PAD_R}" y2="${phY(-90)}"/>
+        <line class="bc-zero" x1="${PAD_L}" y1="${phY(-180)}" x2="${W - PAD_R}" y2="${phY(-180)}"/>
+        <text class="bc-axis-label" x="4" y="${phY(0) + 3}">0°</text>
+        <text class="bc-axis-label" x="4" y="${phY(-90) + 3}">-90°</text>
+        <text class="bc-axis-label" x="4" y="${phY(-180) + 3}">-180°</text>
+        <path class="bc-curve" d="${phPath}"/>
+        <circle class="bc-mark" cx="${crossX}" cy="${phY(phaseMargin - 180)}" r="3"/>
+        <text class="bc-callout" x="${clamp(crossX + 8, 0, W - 90)}" y="${phY(phaseMargin - 180) - 6}">PM ≈ ${fmt(phaseMargin, 0)}°</text>
+        ${xLabels}
+        <line class="bc-crosshair" id="bcPhCross" x1="0" y1="${phPadT}" x2="0" y2="${phH - phPadB}"/>
+        <text class="bc-tooltip" id="bcPhTip" x="0" y="${phPadT + 10}"></text>
+        <rect class="bc-hit" id="bcPhHit" x="${PAD_L}" y="0" width="${plotW}" height="${phH}"/>
+      </svg>`;
+
+    const magSvg = document.getElementById('bcMag');
+    const phSvg = document.getElementById('bcPhase');
+    const magCross = document.getElementById('bcMagCross');
+    const phCross = document.getElementById('bcPhCross');
+    const magTip = document.getElementById('bcMagTip');
+    const phTip = document.getElementById('bcPhTip');
+
+    function freqFromEvent(evt, svg) {
+      const rect = svg.getBoundingClientRect();
+      const fracX = clamp((evt.clientX - rect.left) / rect.width, 0, 1);
+      const xView = fracX * W;
+      const logf = clamp(3 + ((xView - PAD_L) / plotW) * 6, 3, 9);
+      const idx = clamp(Math.round(((logf - 3) / 6) * N), 0, N);
+      return idx;
+    }
+
+    function showCrosshair(idx) {
+      const f = freqs[idx];
+      const x = xPix(f);
+      const flabel = f >= 1e6 ? `${fmt(f / 1e6, 2)}MHz` : f >= 1e3 ? `${fmt(f / 1e3, 1)}kHz` : `${fmt(f, 0)}Hz`;
+      magCross.setAttribute('x1', x); magCross.setAttribute('x2', x); magCross.style.opacity = 1;
+      phCross.setAttribute('x1', x); phCross.setAttribute('x2', x); phCross.style.opacity = 1;
+      const magTipX = clamp(x + 6, 0, W - 90);
+      magTip.setAttribute('x', magTipX); magTip.textContent = `${flabel} · ${fmt(mags[idx], 1)}dB`; magTip.style.opacity = 1;
+      const phTipX = clamp(x + 6, 0, W - 90);
+      phTip.setAttribute('x', phTipX); phTip.textContent = `${flabel} · ${fmt(phases[idx], 0)}°`; phTip.style.opacity = 1;
+    }
+
+    function hideCrosshair() {
+      magCross.style.opacity = 0; phCross.style.opacity = 0;
+      magTip.style.opacity = 0; phTip.style.opacity = 0;
+    }
+
+    magSvg.addEventListener('pointermove', e => showCrosshair(freqFromEvent(e, magSvg)));
+    phSvg.addEventListener('pointermove', e => showCrosshair(freqFromEvent(e, phSvg)));
+    magSvg.addEventListener('pointerleave', hideCrosshair);
+    phSvg.addEventListener('pointerleave', hideCrosshair);
+  }
 })();
